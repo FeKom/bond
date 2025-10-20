@@ -1,0 +1,49 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/bond
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        '[format_sql]': true
+        jdbc:
+          '[batch_size]': 20
+  data:
+    redis:
+      host: redis
+      port: 6379
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: 5000ms
+
+rate-limit:
+  default:
+    requests: 1000
+    period: 3600
+    # Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    prometheus:
+        access: READ_ONLY
+    # Logging
+logging:
+  level:
+    '[github.fekom]': DEBUG
+    '[org.springframework.data.redis]': WARN
+    '[org.hibernate]': WARN
