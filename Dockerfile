@@ -3,7 +3,7 @@ FROM gradle:8.10.0-jdk21-alpine AS builder
 WORKDIR /app
 
 # Copy build files
-COPY build.gradle settings.gradle ./
+COPY build.gradle.kts settings.gradle.kts ./
 COPY src ./src
 
 # Build the application

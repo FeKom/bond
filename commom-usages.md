@@ -10,18 +10,11 @@ docker-compose logs rate-limiter-app -f
 # Ver logs do PostgreSQL
 docker-compose logs postgres -f
 
-# Parar todos os serviços
-docker-compose down
-
-# Parar e remover volumes (dados)
-docker-compose down -v
-
 # Recriar apenas a aplicação
 docker-compose up -d --build rate-limiter-app
 
 # Executar testes
 docker-compose exec rate-limiter-app ./gradlew test
-
 
 # Aplicação
 curl http://localhost:8080/actuator/health
