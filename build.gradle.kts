@@ -43,6 +43,8 @@ dependencies {
 
     // H2 para desenvolvimento/teste
     runtimeOnly("com.h2database:h2")
+    implementation("org.flywaydb:flyway-core")
+
     
     
     // Test

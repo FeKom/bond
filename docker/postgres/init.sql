@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS bond_configs (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Inserir algumas configurações de exemplo
 INSERT INTO bond_configs (api_key, endpoint, requests_limit, period_seconds, algorithm) 
 VALUES 
     ('test-key-1', '/api/users', 1000, 3600, 'token-bucket'),
