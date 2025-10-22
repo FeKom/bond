@@ -27,22 +27,29 @@ docker-compose exec redis redis-cli ping
 
 ### Visualize Source
 bond/
-├── 📁 src/
-│   └── 📁 main/
-│       ├── 📁 java/
-│       │   └── 📁 github/fekom/bond/
-│       │       ├── 🎯 BondApplication.java
-│       │       ├── 📁 controller/
-│       │       │   └── 🎯 RateLimitController.java
-│       │       ├── 📁 service/
-│       │       │   ├── 🎯 RateLimitService.java
-│       │       │   └── 📁 algorithm/
-│       │       │       ├── 🔧 TokenBucketAlgorithm.java
-│       │       │       └── 🔧 SlidingWindowAlgorithm.java
-│       │       ├── 📁 model/
-│       │       │   ├── 📦 RateLimitRequest.java
-│       │       │   └── 📦 RateLimitResponse.java
-│       │       └── 📁 util/
-│       │           └── 🎯 ClientIPResolver.java
-│       └── 📁 resources/
-│           └── ⚙️ application.yml
+├── 📁 src/main/java/github/fekom/bond/
+│   ├── 🎯 BondApplication.java
+│   ├── 📁 config/
+│   │   ├── 🔧 RateLimitConfig.java          // Configuração por cliente
+│   │   └── 🔧 TierConfig.java               // Configuração dos planos
+│   ├── 📁 service/
+│   │   ├── 🎯 RateLimitService.java         // Serviço principal
+│   │   ├── 🎯 TokenBucketService.java       // Implementação do algoritmo
+│   │   ├── 🎯 TierService.java              // Gestão de planos
+│   │   └── 📁 algorithm/
+│   │       ├── 🔧 TokenBucket.java          // Algoritmo base (genérico)
+│   │       └── 🔧 RateLimitAlgorithm.java   // Interface
+│   ├── 📁 model/
+│   │   ├── 📦 entity/
+│   │   │   ├── 📦 Client.java               // Cliente + plano
+│   │   │   └── 📦 RateLimitConfig.java      // Config dinâmica
+│   │   ├── 📦 dto/
+│   │   │   ├── 📦 RateLimitRequest.java
+│   │   │   ├── 📦 RateLimitResponse.java
+│   │   │   └── 📦 TierInfo.java
+│   │   └── 🎯 enums/
+│   │       └── 📦 TierType.java             // FREE, STARTUP, ENTERPRISE
+│   └── 📁 repository/
+│       ├── 🎯 ClientRepository.java
+│       └── 🎯 RateLimitConfigRepository.java
+

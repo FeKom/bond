@@ -36,6 +36,9 @@ dependencies {
     implementation("io.micrometer:micrometer-core")
     implementation("io.micrometer:micrometer-registry-prometheus")
 
+    //UUIDV7
+    implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")
+
 
     // Documentation
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
