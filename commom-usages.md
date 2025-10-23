@@ -26,30 +26,56 @@ curl http://localhost:9090/-/healthy
 docker-compose exec redis redis-cli ping
 
 ### Visualize Source
-bond/
-├── 📁 src/main/java/github/fekom/bond/
-│   ├── 🎯 BondApplication.java
-│   ├── 📁 config/
-│   │   ├── 🔧 RateLimitConfig.java          // Configuração por cliente
-│   │   └── 🔧 TierConfig.java               // Configuração dos planos
-│   ├── 📁 service/
-│   │   ├── 🎯 RateLimitService.java         // Serviço principal
-│   │   ├── 🎯 TokenBucketService.java       // Implementação do algoritmo
-│   │   ├── 🎯 TierService.java              // Gestão de planos
-│   │   └── 📁 algorithm/
-│   │       ├── 🔧 TokenBucket.java          // Algoritmo base (genérico)
-│   │       └── 🔧 RateLimitAlgorithm.java   // Interface
-│   ├── 📁 model/
-│   │   ├── 📦 entity/
-│   │   │   ├── 📦 Client.java               // Cliente + plano
-│   │   │   └── 📦 RateLimitConfig.java      // Config dinâmica
-│   │   ├── 📦 dto/
-│   │   │   ├── 📦 RateLimitRequest.java
-│   │   │   ├── 📦 RateLimitResponse.java
-│   │   │   └── 📦 TierInfo.java
-│   │   └── 🎯 enums/
-│   │       └── 📦 TierType.java             // FREE, STARTUP, ENTERPRISE
-│   └── 📁 repository/
-│       ├── 🎯 ClientRepository.java
-│       └── 🎯 RateLimitConfigRepository.java
-
+src/main
+├── java/github/fekom/bond
+│   ├── algorithms
+│   │   ├── TokenBucket.java
+│   │   └── RateLimiter.java
+│   │
+│   ├── config
+│   │   └── RateLimiterConfig.java
+│   │
+│   ├── controller
+│   │   └── BondController.java
+│   │
+│   ├── domain
+│   │   ├── dto
+│   │   │   ├── RequestPayload.java
+│   │   │   └── RateLimitResult.java
+│   │   │
+│   │   └── model
+│   │       ├── Client.java
+│   │       ├── BlockedClient.java
+│   │       └── RequestLog.java
+│   │
+│   ├── entities
+│   │   ├── ClientEntity.java
+│   │   ├── BlockedClientEntity.java
+│   │   └── RequestLogEntity.java
+│   │
+│   ├── enums
+│   │   └── TierType.java
+│   │
+│   ├── infrastructure/persistence
+│   │   ├── ClientRepository.java
+│   │   ├── BlockedClientRepository.java
+│   │   └── RequestLogRepository.java
+│   │
+│   ├── resolver
+│   │   └── ClientIPResolver.java
+│   │
+│   ├── service
+│   │   ├── RateLimiterService.java
+│   │   ├── ClientService.java
+│   │   ├── BlockedClientService.java
+│   │   └── RequestLogService.java
+│   │
+│   ├── utils
+│   │   ├── IpHashUtil.java
+│   │   └── UuidUtil.java
+│   │
+│   └── BondApplication.java
+│
+└── resources
+    ├── application.yml
+    └── application-dev.yml
