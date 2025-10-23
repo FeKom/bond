@@ -34,7 +34,6 @@ public enum TierType {
         this.description = description;
     }
 
-    // Getters
     public long getCapacityBytes() { return capacityBytes; }
     public long getRefillRateBytesPerSecond() { return refillRateBytesPerSecond; }
     public double getBurstMultiplier() { return burstMultiplier; }
