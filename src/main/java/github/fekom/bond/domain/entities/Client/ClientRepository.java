@@ -6,7 +6,7 @@ import java.util.Set;
 
 import github.fekom.bond.domain.enums.TierType;
 
-public interface ClientRepository {
+ public interface ClientRepository {
 	// boolean existsByClientId(String clientId);
 	List<Client> find(ClientQuery query);
 
