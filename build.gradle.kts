@@ -23,13 +23,18 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    
+
+    //FreeBuilder
+    implementation("org.inferred:freebuilder:2.4.1")
+    annotationProcessor ("org.inferred:freebuilder:2.4.1")
+
+
     // Redis
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
-    
+
     // PostgreSQL
     runtimeOnly("org.postgresql:postgresql")
-    
+
     // Observability (Micrometer)
     implementation("io.micrometer:micrometer-tracing-bridge-brave")
     implementation("io.micrometer:micrometer-observation")
@@ -48,8 +53,8 @@ dependencies {
     runtimeOnly("com.h2database:h2")
     implementation("org.flywaydb:flyway-core")
 
-    
-    
+
+
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")

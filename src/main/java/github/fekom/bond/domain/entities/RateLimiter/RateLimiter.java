@@ -1,4 +1,4 @@
-package github.fekom.bond.domain.entities;
+package github.fekom.bond.domain.entities.RateLimiter;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

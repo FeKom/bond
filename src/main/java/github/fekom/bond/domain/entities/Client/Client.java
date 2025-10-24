@@ -1,4 +1,4 @@
-package github.fekom.bond.domain.entities;
+package github.fekom.bond.domain.entities.Client;
 
 import github.fekom.bond.domain.enums.TierType;
 
