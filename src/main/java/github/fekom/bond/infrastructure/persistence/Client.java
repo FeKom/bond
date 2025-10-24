@@ -62,7 +62,7 @@ public class Client {
 		this.updatedAt = updatedAt;
 	}
 
-	public static Client fromDomain(github.fekom.bond.domain.entities.Client domain) {
+	public static Client fromDomain(github.fekom.bond.domain.entities.Client.Client domain) {
 		var client = new Client();
 		client.id = domain.id();
 		client.tier = domain.tier();
@@ -72,8 +72,8 @@ public class Client {
 		return client;
 	}
 
-	public github.fekom.bond.domain.entities.Client toDomain() {
-		return new github.fekom.bond.domain.entities.Client(
+	public github.fekom.bond.domain.entities.Client.Client toDomain() {
+		return new github.fekom.bond.domain.entities.Client.Client(
 				getId(),
 				isEnabled(),
 				getCreatedAt(),

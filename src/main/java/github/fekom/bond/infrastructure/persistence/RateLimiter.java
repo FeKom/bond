@@ -69,7 +69,7 @@ public class RateLimiter {
 		this.updateAt = updateAt;
 	}
 
-	public static RateLimiter fromDomain(github.fekom.bond.domain.entities.RateLimiter domain) {
+	public static RateLimiter fromDomain(github.fekom.bond.domain.entities.RateLimiter.RateLimiter domain) {
 		var entity = new RateLimiter();
 		entity.setId(domain.id());
 		entity.setClientId(domain.clientId());
@@ -80,8 +80,8 @@ public class RateLimiter {
 		return entity;
 	}
 
-	public github.fekom.bond.domain.entities.RateLimiter toDomain() {
-		return new github.fekom.bond.domain.entities.RateLimiter(
+	public github.fekom.bond.domain.entities.RateLimiter.RateLimiter toDomain() {
+		return new github.fekom.bond.domain.entities.RateLimiter.RateLimiter(
 				getId(),
 				getClientId(),
 				getEndPoint(),
