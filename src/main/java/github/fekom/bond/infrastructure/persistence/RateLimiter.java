@@ -15,7 +15,8 @@ public class RateLimiter {
 	private String clientId;
 	@Column(name = "end_point")
 	private String endPoint;
-	private TokenBucket bucket;
+
+	TokenBucket bucket;
 	@Column(name = "created_at")
 	private String createAt;
 	@Column(name = "updated_at")
@@ -49,10 +50,6 @@ public class RateLimiter {
 		return bucket;
 	}
 
-	public void setBucket(TokenBucket bucket) {
-		this.bucket = bucket;
-	}
-
 	public String getCreateAt() {
 		return createAt;
 	}
@@ -74,8 +71,8 @@ public class RateLimiter {
 		entity.setId(domain.id());
 		entity.setClientId(domain.clientId());
 		entity.setEndPoint(domain.endPoint());
-		entity.setBucket(domain.bucket());
 		entity.setCreateAt(domain.createAt());
+		entity.bucket = domain.bucket();
 		entity.setUpdateAt(domain.updateAt());
 		return entity;
 	}

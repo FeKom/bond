@@ -29,7 +29,8 @@ public class TokenBucket {
 		this.createdAt = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 	}
 
-	public boolean allowRequest(long requestSizeBytes) {
+
+    public boolean allowRequest(long requestSizeBytes) {
 		refill();
 		if (currentBytes >= requestSizeBytes) {
 			currentBytes -= requestSizeBytes;
