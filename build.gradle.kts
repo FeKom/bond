@@ -1,6 +1,7 @@
 plugins {
     id("org.springframework.boot") version "3.2.0"
     id("io.spring.dependency-management") version "1.1.4"
+    id("org.flywaydb.flyway") version "9.22.3"
     java
 }
 
@@ -49,9 +50,8 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
 
 
-    // H2 para desenvolvimento/teste
-    runtimeOnly("com.h2database:h2")
-    implementation("org.flywaydb:flyway-core")
+    // Flyway
+    implementation("org.flywaydb:flyway-core:9.22.3")
 
 
 
@@ -62,6 +62,12 @@ dependencies {
     testImplementation("org.testcontainers:postgresql")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
+}
+
+flyway {
+    url = "jdbc:postgresql://localhost:5432/bond"
+    user = "postgres"
+    password = "postgres"
 }
 
 tasks.withType<Test> {

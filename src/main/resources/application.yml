@@ -35,10 +35,10 @@ spring:
           max-wait: 5000ms
 
 # Rate Limit Configuration
-rate-limit:
-  default:
-    requests: 1000
-    period: 3600
+  rate-limit:
+    default:
+      requests: 1000
+      period: 3600
 
 # Actuator
 management:
@@ -62,5 +62,6 @@ springdoc:
 # Logging (opcional)
 logging:
   level:
-    '[com.ratelimiter]': DEBUG
-    '[org.springframework.data.redis]': WARN
+    root: INFO
+    '[qorg.springframework.web]': DEBUG
+    '[github.fekom.bond]': DEBUG

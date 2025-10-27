@@ -1,18 +1,22 @@
 package github.fekom.bond.domain.enums;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public enum TierType {
+	@JsonProperty("FREE")
 	FREE(
 			32_768, // 32KB capacity
 			32_768 / 3600, // 32KB/hour refill
 			1.5, // 150% burst
 			"Free tier - 432 requests/hour"),
 
+	@JsonProperty("STARTUP")
 	STARTUP(
 			10 * 1024 * 1024, // 10MB capacity
 			(10 * 1024 * 1024) / 3600, // 10MB/hour
 			2.0, // 200% burst
 			"Startup - 140K requests/hour"),
-
+	@JsonProperty("ENTERPRISE")
 	ENTERPRISE(
 			1 * 1024 * 1024 * 1024, // 1GB capacity
 			(1 * 1024 * 1024 * 1024) / 3600, // 1GB/hour

@@ -3,8 +3,8 @@ CREATE TABLE IF NOT EXISTS clients (
     id VARCHAR(255) PRIMARY KEY,
     tier VARCHAR(50) NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at VARCHAR(50) NOT NULL,
+    updated_at VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS rate_limiters (
@@ -13,12 +13,9 @@ CREATE TABLE IF NOT EXISTS rate_limiters (
     endpoint VARCHAR(1024) NOT NULL,
     tier VARCHAR(50) NOT NULL,
 
-    -- TokenBucket state
-    current_bytes BIGINT NOT NULL,
-    last_refill_time BIGINT NOT NULL,
 
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at VARCHAR(50) NOT NULL,
+    updated_at VARCHAR(50) NOT NULL,
 
     CONSTRAINT fk_rate_limiter_client
         FOREIGN KEY(client_id)
