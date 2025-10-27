@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.data.jpa.repository.Query;
+
 import github.fekom.bond.domain.enums.TierType;
 
  public interface ClientRepository {
@@ -39,6 +41,7 @@ import github.fekom.bond.domain.enums.TierType;
 
 	void save(List<Client> clientsList);
 
+	@Query("INSERT INTO clients (id, tier, enabled, created_at, updated_at) VALUES (:id, :tier, :enabled, :createdAt, :updatedAt)	")
 	default void save(Client client) {
 		save(List.of(client));
 	};
