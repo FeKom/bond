@@ -1,6 +1,4 @@
-- V1__Create_client_and_rate_limiter_tables.sql
 
--- Create client table
 CREATE TABLE IF NOT EXISTS clients (
     id VARCHAR(255) PRIMARY KEY,
     tier VARCHAR(50) NOT NULL,
@@ -9,7 +7,6 @@ CREATE TABLE IF NOT EXISTS clients (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create rate_limiter table
 CREATE TABLE IF NOT EXISTS rate_limiters (
     id VARCHAR(255) PRIMARY KEY,
     client_id VARCHAR(255) NOT NULL,
@@ -29,7 +26,6 @@ CREATE TABLE IF NOT EXISTS rate_limiters (
         ON DELETE CASCADE
 );
 
--- Create blocked_clients table
 CREATE TABLE IF NOT EXISTS blocked_clients (
     id VARCHAR(255) PRIMARY KEY,
     client_id VARCHAR(255) NOT NULL,
@@ -43,7 +39,6 @@ CREATE TABLE IF NOT EXISTS blocked_clients (
         ON DELETE CASCADE
 );
 
--- Create request_logs table
 CREATE TABLE IF NOT EXISTS request_logs (
     id VARCHAR(255) PRIMARY KEY,
     client_id VARCHAR(255) NOT NULL,
@@ -60,7 +55,6 @@ CREATE TABLE IF NOT EXISTS request_logs (
         ON DELETE CASCADE
 );
 
--- Indexes for performance
 CREATE INDEX idx_rate_limiters_client_id ON rate_limiters(client_id);
 CREATE INDEX idx_rate_limiters_endpoint ON rate_limiters(endpoint);
 CREATE INDEX idx_blocked_clients_client_id ON blocked_clients(client_id);

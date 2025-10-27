@@ -1,25 +1,15 @@
 package github.fekom.bond.infrastructure.persistence;
 
 import github.fekom.bond.algorithms.TokenBucket;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 
-@Entity
-@Table(name = "rate_limiter")
+
+
 public class RateLimiter {
-	@Id
 	private String id;
-	@Column(name = "client_id")
 	private String clientId;
-	@Column(name = "end_point")
 	private String endPoint;
-
-	TokenBucket bucket;
-	@Column(name = "created_at")
+	private TokenBucket bucket;
 	private String createAt;
-	@Column(name = "updated_at")
 	private String updateAt;
 
 	public void setId(String id) {
