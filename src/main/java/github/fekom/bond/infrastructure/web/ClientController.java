@@ -49,4 +49,19 @@ public class ClientController {
 		}
 	}
 
+	@GetMapping("/{id}")
+	public ResponseEntity<?> getById(@RequestParam String id) {
+		try {
+			var clientOpt = service.getById(id);
+			if (clientOpt.isPresent()) {
+				return ResponseEntity.ok(clientOpt.get());
+			} else {
+				return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Client not found");
+			}
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving client: " + e.getMessage());
+		}
+	}
+
+
 }
