@@ -11,6 +11,9 @@ import github.fekom.bond.api.ClientService;
 import github.fekom.bond.api.dto.in.Client.CreateClientRequest;
 import github.fekom.bond.api.dto.out.Client.CreateClientResponse;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @Controller
 @RequestMapping("/clients")
@@ -31,4 +34,19 @@ public class ClientController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating client: " + e.getMessage());
 		}
 	}
+
+	@GetMapping("/tier/{id}")
+	public ResponseEntity<?> getClientTier(@RequestParam String id) {
+		try {
+			var tierOpt = service.getTierById(id);
+			if (tierOpt.isPresent()) {
+				return ResponseEntity.ok(tierOpt.get());
+			} else {
+				return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Client not found");
+			}
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving client tier: " + e.getMessage());
+		}
+	}
+
 }
