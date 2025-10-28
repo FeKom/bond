@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import org.springframework.data.jpa.repository.Query;
 
 import github.fekom.bond.domain.enums.TierType;
 
@@ -30,18 +29,19 @@ import github.fekom.bond.domain.enums.TierType;
 	}
 
 	default Optional<Client> findById(String id) {
-		return findFirst(ClientQuery.builder()
+		return find(ClientQuery.builder()
 				.ids(Set.of(id))
-				.build());
+				.build())
+				.stream()
+				.findFirst();
 	}
 
 	List<Client> findByTier(TierType tier);
 
-	Set<Client> findUserTierById(String id);
+	Optional<TierType> findClientTierById(String id);
 
 	void save(List<Client> clientsList);
 
-	@Query("INSERT INTO clients (id, tier, enabled, created_at, updated_at) VALUES (:id, :tier, :enabled, :createdAt, :updatedAt)	")
 	default void save(Client client) {
 		save(List.of(client));
 	};
