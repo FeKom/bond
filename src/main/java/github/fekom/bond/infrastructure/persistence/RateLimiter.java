@@ -36,6 +36,10 @@ public class RateLimiter {
 		this.endPoint = endPoint;
 	}
 
+	public void setBucket(TokenBucket bucket) {
+		this.bucket = bucket;
+	}
+
 	public TokenBucket getBucket() {
 		return bucket;
 	}
@@ -62,7 +66,7 @@ public class RateLimiter {
 		entity.setClientId(domain.clientId());
 		entity.setEndPoint(domain.endPoint());
 		entity.setCreateAt(domain.createAt());
-		entity.bucket = domain.bucket();
+		entity.setBucket(domain.bucket());
 		entity.setUpdateAt(domain.updateAt());
 		return entity;
 	}
