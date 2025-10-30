@@ -31,5 +31,15 @@ public record RateLimiter(
 			now
 			);
 	}
+	public RateLimiter withUpdateTier(TierType tier) {
+		return new RateLimiter(
+			this.id,
+			this.clientId,
+			this.endPoint,
+			new TokenBucket(tier),
+			this.createAt,
+			LocalDateTime.now().format(formatter)
+		);
+	}
 
 }
