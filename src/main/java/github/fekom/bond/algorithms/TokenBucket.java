@@ -29,8 +29,7 @@ public class TokenBucket {
 		this.createdAt = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 	}
 
-
-    public boolean allowRequest(long requestSizeBytes) {
+	public boolean allowRequest(long requestSizeBytes) {
 		refill();
 		if (currentBytes >= requestSizeBytes) {
 			currentBytes -= requestSizeBytes;
@@ -50,6 +49,7 @@ public class TokenBucket {
 	}
 
 	public long getWaitTime(long requestSizeBytes) {
+		refill();
 		long bytesNeeded = requestSizeBytes - currentBytes;
 		if (bytesNeeded <= 0) {
 			return 0;
@@ -63,6 +63,23 @@ public class TokenBucket {
 
 	public double getUsagePercentage() {
 		return (getUsedBytes() * 100.0) / bucketCapacityBytes;
+	}
+
+	public long getCurrentBytes() {
+		return currentBytes;
+	}
+
+	public long getLastRefillTime() {
+		return lastRefillTime;
+	}
+
+	// Setters (para restaurar estado do banco)
+	public void setCurrentBytes(long currentBytes) {
+		this.currentBytes = currentBytes;
+	}
+
+	public void setLastRefillTime(long lastRefillTime) {
+		this.lastRefillTime = lastRefillTime;
 	}
 
 	public TierType getTierType() {
