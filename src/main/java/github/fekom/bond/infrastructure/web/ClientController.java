@@ -2,7 +2,6 @@ package github.fekom.bond.infrastructure.web;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,9 +12,10 @@ import github.fekom.bond.api.dto.out.Client.CreateClientResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 
-@Controller
+@RestController
 @RequestMapping("/clients")
 public class ClientController {
 	private final ClientService service;

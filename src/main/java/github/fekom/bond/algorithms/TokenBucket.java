@@ -73,7 +73,6 @@ public class TokenBucket {
 		return lastRefillTime;
 	}
 
-	// Setters (para restaurar estado do banco)
 	public void setCurrentBytes(long currentBytes) {
 		this.currentBytes = currentBytes;
 	}

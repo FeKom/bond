@@ -24,7 +24,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
-
+    implementation("org.springframework.cloud:spring-cloud-starter-gateway:4.0.0")
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
     //FreeBuilder
     implementation("org.inferred:freebuilder:2.4.1")
     annotationProcessor ("org.inferred:freebuilder:2.4.1")
