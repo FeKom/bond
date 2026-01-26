@@ -7,20 +7,25 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "clients")
 public class Client {
+
 	@Id
 	private String id;
 
 	@Enumerated(EnumType.STRING)
 	private TierType tier;
+
 	private boolean enabled = true;
+
 	@Column(name = "created_at")
-	private String createdAt;
+	private LocalDateTime createdAt;
+
 	@Column(name = "updated_at")
-	private String updatedAt;
+	private LocalDateTime updatedAt;
 
 	public String getId() {
 		return id;
@@ -46,19 +51,19 @@ public class Client {
 		this.enabled = enabled;
 	}
 
-	public String getCreatedAt() {
+	public LocalDateTime getCreatedAt() {
 		return createdAt;
 	}
 
-	public void setCreatedAt(String createdAt) {
+	public void setCreatedAt(LocalDateTime createdAt) {
 		this.createdAt = createdAt;
 	}
 
-	public String getUpdatedAt() {
+	public LocalDateTime getUpdatedAt() {
 		return updatedAt;
 	}
 
-	public void setUpdatedAt(String updatedAt) {
+	public void setUpdatedAt(LocalDateTime updatedAt) {
 		this.updatedAt = updatedAt;
 	}
 
@@ -74,11 +79,12 @@ public class Client {
 
 	public github.fekom.bond.domain.entities.Client.Client toDomain() {
 		return new github.fekom.bond.domain.entities.Client.Client(
-				getId(),
-				isEnabled(),
-				getCreatedAt(),
-				getUpdatedAt(),
-				getTier());
+			getId(),
+			isEnabled(),
+			getCreatedAt(),
+			getUpdatedAt(),
+			getTier()
+		);
 	}
 
 	@Override
@@ -95,32 +101,21 @@ public class Client {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
+		if (this == obj) return true;
+		if (obj == null) return false;
+		if (getClass() != obj.getClass()) return false;
 		Client other = (Client) obj;
 		if (id == null) {
-			if (other.id != null)
-				return false;
-		} else if (!id.equals(other.id))
-			return false;
-		if (tier != other.tier)
-			return false;
-		if (enabled != other.enabled)
-			return false;
+			if (other.id != null) return false;
+		} else if (!id.equals(other.id)) return false;
+		if (tier != other.tier) return false;
+		if (enabled != other.enabled) return false;
 		if (createdAt == null) {
-			if (other.createdAt != null)
-				return false;
-		} else if (!createdAt.equals(other.createdAt))
-			return false;
+			if (other.createdAt != null) return false;
+		} else if (!createdAt.equals(other.createdAt)) return false;
 		if (updatedAt == null) {
-			if (other.updatedAt != null)
-				return false;
-		} else if (!updatedAt.equals(other.updatedAt))
-			return false;
+			if (other.updatedAt != null) return false;
+		} else if (!updatedAt.equals(other.updatedAt)) return false;
 		return true;
 	}
 }

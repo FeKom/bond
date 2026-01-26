@@ -1,23 +1,22 @@
 package github.fekom.bond.infrastructure.web;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-
 import github.fekom.bond.api.ClientService;
 import github.fekom.bond.api.dto.in.Client.CreateClientRequest;
 import github.fekom.bond.api.dto.out.Client.CreateClientResponse;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 
 @RestController
 @RequestMapping("/clients")
 public class ClientController {
+
 	private final ClientService service;
 
 	public ClientController(ClientService service) {
@@ -36,7 +35,7 @@ public class ClientController {
 	}
 
 	@GetMapping("/tier/{id}")
-	public ResponseEntity<?> getClientTier(@RequestParam String id) {
+	public ResponseEntity<?> getClientTier(@PathVariable String id) {
 		try {
 			var tierOpt = service.getTierById(id);
 			if (tierOpt.isPresent()) {
@@ -45,12 +44,14 @@ public class ClientController {
 				return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Client not found");
 			}
 		} catch (Exception e) {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving client tier: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+				"Error retrieving client tier: " + e.getMessage()
+			);
 		}
 	}
 
 	@GetMapping("/{id}")
-	public ResponseEntity<?> getById(@RequestParam String id) {
+	public ResponseEntity<?> getById(@PathVariable String id) {
 		try {
 			var clientOpt = service.getById(id);
 			if (clientOpt.isPresent()) {
@@ -62,6 +63,4 @@ public class ClientController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving client: " + e.getMessage());
 		}
 	}
-
-
 }

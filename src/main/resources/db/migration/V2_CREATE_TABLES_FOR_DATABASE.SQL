@@ -11,9 +11,8 @@ CREATE TABLE IF NOT EXISTS rate_limiters (
     id VARCHAR(255) PRIMARY KEY,
     client_id VARCHAR(255) NOT NULL,
     endpoint VARCHAR(1024) NOT NULL,
-    tier VARCHAR(50) NOT NULL,
-
-
+    tier VARCHAR(50),
+    bucket JSONB,
     created_at VARCHAR(50) NOT NULL,
     updated_at VARCHAR(50) NOT NULL,
 

@@ -1,23 +1,13 @@
 package github.fekom.bond.domain.entities.Client;
 
-import github.fekom.bond.domain.enums.TierType;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-
 import com.fasterxml.uuid.Generators;
+import github.fekom.bond.domain.enums.TierType;
+import java.time.LocalDateTime;
 
-public record Client(
-		String id,
-		boolean enabled,
-		String createdAt,
-		String updatedAt,
-		TierType tier) {
-	private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-
+public record Client(String id, boolean enabled, LocalDateTime createdAt, LocalDateTime updatedAt, TierType tier) {
 	public static Client create(TierType tier) {
 		var uuid = Generators.timeBasedEpochGenerator().generate();
-		String now = LocalDateTime.now().format(formatter);
+		LocalDateTime now = LocalDateTime.now();
 		return new Client("API_KEY_" + uuid, true, now, now, tier);
 	}
 }
