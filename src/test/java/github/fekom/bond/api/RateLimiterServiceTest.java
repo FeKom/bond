@@ -6,20 +6,15 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import github.fekom.bond.algorithms.TokenBucket;
-import github.fekom.bond.domain.entities.Client.Client;
-import github.fekom.bond.domain.entities.Client.ClientRepository;
-import github.fekom.bond.domain.entities.RateLimiter.RateLimiterResult;
-import github.fekom.bond.domain.enums.TierType;
-import github.fekom.bond.infrastructure.persistence.RateLimiter;
-import github.fekom.bond.infrastructure.repository.RateLimiterRepository;
-import java.time.LocalDateTime;
+import github.fekom.bond.domain.Capacity;
+import github.fekom.bond.domain.RequestResult;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -27,134 +22,155 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("RateLimiterService")
 class RateLimiterServiceTest {
 
-	@Mock
-	private ClientRepository clientRepository;
+	private static final Capacity DEFAULT_CAPACITY = new Capacity(
+		32_768, 32_768 / 3600, 1.5
+	);
+
+	private static final Capacity UPLOAD_CAPACITY = new Capacity(
+		10 * 1024 * 1024, (10 * 1024 * 1024) / 3600, 2.0
+	);
+
+	private static final Capacity IP_OVERRIDE_CAPACITY = new Capacity(
+		1L * 1024 * 1024 * 1024, (1L * 1024 * 1024 * 1024) / 3600, 3.0
+	);
+
+	private static final String IP_ADDRESS = "192.168.1.100";
+	private static final String ENDPOINT = "/api/data";
+	private static final String UPLOAD_ENDPOINT = "/api/upload";
 
 	@Mock
-	private RateLimiterRepository rateLimiterRepository;
+	private BucketStore bucketStore;
 
-	@InjectMocks
 	private RateLimiterService service;
 
-	private static final String CLIENT_ID = "API_KEY_123";
-	private static final String ENDPOINT = "/api";
+	@BeforeEach
+	void setUp() {
+		Map<String, Capacity> endpointCapacities = Map.of(UPLOAD_ENDPOINT, UPLOAD_CAPACITY);
+		service = new RateLimiterService(bucketStore, DEFAULT_CAPACITY, endpointCapacities);
+	}
 
 	@Nested
 	@DisplayName("checkRateLimit")
 	class CheckRateLimit {
 
 		@Test
-		@DisplayName("deve permitir request quando cliente tem capacidade (novo rate limiter)")
-		void shouldAllowRequestWhenClientHasCapacity() {
-			// Given
-			Client client = new Client(CLIENT_ID, true, LocalDateTime.now(), LocalDateTime.now(), TierType.FREE);
-			when(clientRepository.findById(CLIENT_ID)).thenReturn(Optional.of(client));
-			when(rateLimiterRepository.findByClientIdAndEndPoint(CLIENT_ID, ENDPOINT)).thenReturn(Optional.empty()); // Novo rate limiter
+		@DisplayName("deve permitir request quando há capacidade (novo bucket)")
+		void shouldAllowRequestWhenNewBucket() {
+			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
+			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.empty());
+			when(bucketStore.findBucket(IP_ADDRESS, ENDPOINT)).thenReturn(Optional.empty());
 
-			// When
-			RateLimiterResult result = service.checkRateLimit(CLIENT_ID, 100);
+			RequestResult result = service.checkRateLimit(IP_ADDRESS, ENDPOINT, 100);
 
-			// Then
 			assertTrue(result.allowed());
+			assertFalse(result.blocked());
 			assertEquals(100, result.usedBytes());
 			assertTrue(result.usagePercentage() > 0);
 			assertEquals(0, result.waitTimeMs());
-
-			// Verifica se salvou o rate limiter
-			verify(rateLimiterRepository).save(any(RateLimiter.class));
+			verify(bucketStore).saveBucket(eq(IP_ADDRESS), eq(ENDPOINT), any(TokenBucket.class));
 		}
 
 		@Test
-		@DisplayName("deve permitir request quando rate limiter existente tem capacidade")
-		void shouldAllowRequestWhenExistingRateLimiterHasCapacity() {
-			// Given
-			Client client = new Client(CLIENT_ID, true, LocalDateTime.now(), LocalDateTime.now(), TierType.FREE);
-			when(clientRepository.findById(CLIENT_ID)).thenReturn(Optional.of(client));
+		@DisplayName("deve permitir request com bucket existente que tem capacidade")
+		void shouldAllowRequestWhenExistingBucketHasCapacity() {
+			TokenBucket existingBucket = new TokenBucket(DEFAULT_CAPACITY);
+			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
+			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.empty());
+			when(bucketStore.findBucket(IP_ADDRESS, ENDPOINT)).thenReturn(Optional.of(existingBucket));
 
-			// Rate limiter existente com bucket quase cheio
-			RateLimiter existingLimiter = createRateLimiterEntity(CLIENT_ID, TierType.FREE, 30_000);
-			when(rateLimiterRepository.findByClientIdAndEndPoint(CLIENT_ID, ENDPOINT)).thenReturn(
-				Optional.of(existingLimiter)
-			);
+			RequestResult result = service.checkRateLimit(IP_ADDRESS, ENDPOINT, 100);
 
-			// When
-			RateLimiterResult result = service.checkRateLimit(CLIENT_ID, 100);
-
-			// Then
 			assertTrue(result.allowed());
-			verify(rateLimiterRepository).save(any(RateLimiter.class));
+			assertFalse(result.blocked());
+			verify(bucketStore).saveBucket(eq(IP_ADDRESS), eq(ENDPOINT), any(TokenBucket.class));
 		}
 
 		@Test
-		@DisplayName("deve rejeitar request quando cliente não tem capacidade")
-		void shouldRejectRequestWhenClientHasNoCapacity() {
-			// Given
-			Client client = new Client(CLIENT_ID, true, LocalDateTime.now(), LocalDateTime.now(), TierType.FREE);
-			when(clientRepository.findById(CLIENT_ID)).thenReturn(Optional.of(client));
+		@DisplayName("deve rejeitar request quando não há capacidade")
+		void shouldRejectRequestWhenNoCapacity() {
+			TokenBucket almostEmptyBucket = new TokenBucket(DEFAULT_CAPACITY);
+			almostEmptyBucket.allowRequest(32_718);
+			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
+			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.empty());
+			when(bucketStore.findBucket(IP_ADDRESS, ENDPOINT)).thenReturn(Optional.of(almostEmptyBucket));
 
-			// Rate limiter com bucket quase vazio (apenas 50 bytes restantes)
-			RateLimiter existingLimiter = createRateLimiterEntity(CLIENT_ID, TierType.FREE, 50);
-			when(rateLimiterRepository.findByClientIdAndEndPoint(CLIENT_ID, ENDPOINT)).thenReturn(
-				Optional.of(existingLimiter)
-			);
+			RequestResult result = service.checkRateLimit(IP_ADDRESS, ENDPOINT, 1000);
 
-			// When
-			RateLimiterResult result = service.checkRateLimit(CLIENT_ID, 1000);
-
-			// Then
 			assertFalse(result.allowed());
+			assertFalse(result.blocked());
 			assertTrue(result.waitTimeMs() > 0);
 		}
 
 		@Test
-		@DisplayName("deve lançar exceção quando cliente não existe")
-		void shouldThrowExceptionWhenClientNotFound() {
-			// Given
-			when(clientRepository.findById(CLIENT_ID)).thenReturn(Optional.empty());
+		@DisplayName("deve usar default capacity quando endpoint não tem config específica")
+		void shouldUseDefaultCapacityWhenNoEndpointConfig() {
+			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
+			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.empty());
+			when(bucketStore.findBucket(IP_ADDRESS, ENDPOINT)).thenReturn(Optional.empty());
 
-			// When/Then
-			IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-				service.checkRateLimit(CLIENT_ID, 100)
-			);
+			RequestResult result = service.checkRateLimit(IP_ADDRESS, ENDPOINT, 100);
 
-			assertEquals("Client not found", exception.getMessage());
-			verify(rateLimiterRepository, never()).save(any());
+			assertTrue(result.allowed());
+			assertEquals(100, result.usedBytes());
 		}
 
 		@Test
-		@DisplayName("deve usar tier correto do cliente para criar rate limiter")
-		void shouldUseCorrectClientTierForRateLimiter() {
-			// Given - Cliente ENTERPRISE
-			Client client = new Client(CLIENT_ID, true, LocalDateTime.now(), LocalDateTime.now(), TierType.ENTERPRISE);
-			when(clientRepository.findById(CLIENT_ID)).thenReturn(Optional.of(client));
-			when(rateLimiterRepository.findByClientIdAndEndPoint(CLIENT_ID, ENDPOINT)).thenReturn(Optional.empty());
+		@DisplayName("deve usar capacity do endpoint quando configurado")
+		void shouldUseEndpointCapacityWhenConfigured() {
+			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
+			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.empty());
+			when(bucketStore.findBucket(IP_ADDRESS, UPLOAD_ENDPOINT)).thenReturn(Optional.empty());
 
-			// When - Request grande que só ENTERPRISE suporta
-			RateLimiterResult result = service.checkRateLimit(CLIENT_ID, 50_000_000); // 50MB
+			// 5MB - maior que default (32KB) mas menor que UPLOAD (10MB)
+			RequestResult result = service.checkRateLimit(IP_ADDRESS, UPLOAD_ENDPOINT, 5_000_000);
 
-			// Then - Deve permitir (ENTERPRISE tem 1GB)
 			assertTrue(result.allowed());
 		}
-	}
 
-	// Helper para criar RateLimiter entity com bucket específico
-	private RateLimiter createRateLimiterEntity(String clientId, TierType tier, long currentBytes) {
-		RateLimiter entity = new RateLimiter();
-		entity.setId("rate-limiter-123");
-		entity.setClientId(clientId);
-		entity.setEndPoint(ENDPOINT);
-		entity.setCreatedAt(LocalDateTime.now());
-		entity.setupdatedAt(LocalDateTime.now());
+		@Test
+		@DisplayName("deve rejeitar no default mas permitir no endpoint com capacity maior")
+		void shouldRejectOnDefaultButAllowOnEndpointWithHigherCapacity() {
+			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
+			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.empty());
+			when(bucketStore.findBucket(IP_ADDRESS, ENDPOINT)).thenReturn(Optional.empty());
+			when(bucketStore.findBucket(IP_ADDRESS, UPLOAD_ENDPOINT)).thenReturn(Optional.empty());
 
-		// Cria bucket com bytes específicos
-		TokenBucket bucket = new TokenBucket(tier);
-		// Consome bytes para deixar apenas currentBytes restantes
-		long toConsume = bucket.getBucketCapacityBytes() - currentBytes;
-		if (toConsume > 0) {
-			bucket.allowRequest(toConsume);
+			// 50KB - maior que default (32KB)
+			RequestResult defaultResult = service.checkRateLimit(IP_ADDRESS, ENDPOINT, 50_000);
+			assertFalse(defaultResult.allowed());
+
+			// Mesmo tamanho no endpoint upload (10MB) deve passar
+			RequestResult uploadResult = service.checkRateLimit(IP_ADDRESS, UPLOAD_ENDPOINT, 50_000);
+			assertTrue(uploadResult.allowed());
 		}
-		entity.setBucket(bucket);
 
-		return entity;
+		@Test
+		@DisplayName("deve usar IP override sobre capacity do endpoint")
+		void shouldUseIpOverrideOverEndpointCapacity() {
+			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
+			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.of(IP_OVERRIDE_CAPACITY));
+			when(bucketStore.findBucket(IP_ADDRESS, UPLOAD_ENDPOINT)).thenReturn(Optional.empty());
+
+			// 50MB - maior que UPLOAD (10MB) mas menor que IP_OVERRIDE (1GB)
+			RequestResult result = service.checkRateLimit(IP_ADDRESS, UPLOAD_ENDPOINT, 50_000_000);
+
+			assertTrue(result.allowed());
+		}
+
+		@Test
+		@DisplayName("deve rejeitar imediatamente quando IP está bloqueado")
+		void shouldRejectImmediatelyWhenIpIsBlocked() {
+			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(true);
+
+			RequestResult result = service.checkRateLimit(IP_ADDRESS, ENDPOINT, 100);
+
+			assertFalse(result.allowed());
+			assertTrue(result.blocked());
+			assertEquals(0, result.usedBytes());
+			// Não deve acessar bucket nem capacity quando bloqueado
+			verify(bucketStore, never()).findBucket(any(), any());
+			verify(bucketStore, never()).findCapacityByIp(any());
+			verify(bucketStore, never()).saveBucket(any(), any(), any());
+		}
 	}
 }

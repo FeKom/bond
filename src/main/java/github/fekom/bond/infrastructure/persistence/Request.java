@@ -1,33 +1,35 @@
 package github.fekom.bond.infrastructure.persistence;
 
-import github.fekom.bond.domain.Capacity;
+import github.fekom.bond.algorithms.TokenBucket;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
-@Table(name = "clients")
-public class Client {
+@Table(name = "requests")
+public class Request {
 
 	@Id
 	private String id;
 
-	@Column(name = "ip_address", nullable = false, unique = true, length = 45)
+	@Column(name = "ip_address", nullable = false, length = 45)
 	private String ipAddress;
 
-	@Column(name = "capacity_bytes")
-	private long capacityBytes;
+	@Column(name = "endpoint", nullable = false, length = 1024)
+	private String endpoint;
 
-	@Column(name = "refill_rate_bytes_per_second")
-	private long refillRateBytesPerSecond;
-
-	@Column(name = "burst_multiplier")
-	private double burstMultiplier;
+	@JdbcTypeCode(SqlTypes.JSON)
+	private TokenBucket bucket;
 
 	@Column(name = "created_at")
 	private LocalDateTime createdAt;
+
+	@Column(name = "updated_at")
+	private LocalDateTime updatedAt;
 
 	public String getId() {
 		return id;
@@ -45,28 +47,20 @@ public class Client {
 		this.ipAddress = ipAddress;
 	}
 
-	public long getCapacityBytes() {
-		return capacityBytes;
+	public String getEndpoint() {
+		return endpoint;
 	}
 
-	public void setCapacityBytes(long capacityBytes) {
-		this.capacityBytes = capacityBytes;
+	public void setEndpoint(String endpoint) {
+		this.endpoint = endpoint;
 	}
 
-	public long getRefillRateBytesPerSecond() {
-		return refillRateBytesPerSecond;
+	public TokenBucket getBucket() {
+		return bucket;
 	}
 
-	public void setRefillRateBytesPerSecond(long refillRateBytesPerSecond) {
-		this.refillRateBytesPerSecond = refillRateBytesPerSecond;
-	}
-
-	public double getBurstMultiplier() {
-		return burstMultiplier;
-	}
-
-	public void setBurstMultiplier(double burstMultiplier) {
-		this.burstMultiplier = burstMultiplier;
+	public void setBucket(TokenBucket bucket) {
+		this.bucket = bucket;
 	}
 
 	public LocalDateTime getCreatedAt() {
@@ -77,8 +71,12 @@ public class Client {
 		this.createdAt = createdAt;
 	}
 
-	public Capacity capacity() {
-		return new Capacity(capacityBytes, refillRateBytesPerSecond, burstMultiplier);
+	public LocalDateTime getUpdatedAt() {
+		return updatedAt;
+	}
+
+	public void setUpdatedAt(LocalDateTime updatedAt) {
+		this.updatedAt = updatedAt;
 	}
 
 	@Override
@@ -87,10 +85,10 @@ public class Client {
 		int result = 1;
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
 		result = prime * result + ((ipAddress == null) ? 0 : ipAddress.hashCode());
-		result = prime * result + Long.hashCode(capacityBytes);
-		result = prime * result + Long.hashCode(refillRateBytesPerSecond);
-		result = prime * result + Double.hashCode(burstMultiplier);
+		result = prime * result + ((endpoint == null) ? 0 : endpoint.hashCode());
+		result = prime * result + ((bucket == null) ? 0 : bucket.hashCode());
 		result = prime * result + ((createdAt == null) ? 0 : createdAt.hashCode());
+		result = prime * result + ((updatedAt == null) ? 0 : updatedAt.hashCode());
 		return result;
 	}
 
@@ -99,19 +97,25 @@ public class Client {
 		if (this == obj) return true;
 		if (obj == null) return false;
 		if (getClass() != obj.getClass()) return false;
-		Client other = (Client) obj;
+		Request other = (Request) obj;
 		if (id == null) {
 			if (other.id != null) return false;
 		} else if (!id.equals(other.id)) return false;
 		if (ipAddress == null) {
 			if (other.ipAddress != null) return false;
 		} else if (!ipAddress.equals(other.ipAddress)) return false;
-		if (capacityBytes != other.capacityBytes) return false;
-		if (refillRateBytesPerSecond != other.refillRateBytesPerSecond) return false;
-		if (Double.compare(burstMultiplier, other.burstMultiplier) != 0) return false;
+		if (endpoint == null) {
+			if (other.endpoint != null) return false;
+		} else if (!endpoint.equals(other.endpoint)) return false;
+		if (bucket == null) {
+			if (other.bucket != null) return false;
+		} else if (!bucket.equals(other.bucket)) return false;
 		if (createdAt == null) {
 			if (other.createdAt != null) return false;
 		} else if (!createdAt.equals(other.createdAt)) return false;
+		if (updatedAt == null) {
+			if (other.updatedAt != null) return false;
+		} else if (!updatedAt.equals(other.updatedAt)) return false;
 		return true;
 	}
 }

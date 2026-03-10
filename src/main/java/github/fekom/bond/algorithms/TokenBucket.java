@@ -2,14 +2,14 @@ package github.fekom.bond.algorithms;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import github.fekom.bond.domain.enums.TierType;
+import github.fekom.bond.domain.Capacity;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TokenBucket {
 
-	private final TierType tierType;
 	// o que cada request consome
 	private final long bucketCapacityBytes;
 	private final long refillRateBytesPerSecond;
@@ -19,11 +19,10 @@ public class TokenBucket {
 	private long lastRefillTime;
 	private LocalDateTime createdAt;
 
-	public TokenBucket(TierType tierType) {
-		this.tierType = tierType;
-		this.bucketCapacityBytes = tierType.getCapacityBytes();
-		this.refillRateBytesPerSecond = tierType.getRefillRateBytesPerSecond();
-		this.burstMultiplier = tierType.getBurstMultiplier();
+	public TokenBucket(Capacity capacity) {
+		this.bucketCapacityBytes = capacity.capacityBytes();
+		this.refillRateBytesPerSecond = capacity.refillRateBytesPerSecond();
+		this.burstMultiplier = capacity.burstMultiplier();
 		this.maxBurstBytes = (long) (bucketCapacityBytes * burstMultiplier);
 
 		this.currentBytes = bucketCapacityBytes;
@@ -34,7 +33,6 @@ public class TokenBucket {
 	// Construtor para deserialização JSON
 	@JsonCreator
 	public TokenBucket(
-		@JsonProperty("tierType") TierType tierType,
 		@JsonProperty("bucketCapacityBytes") long bucketCapacityBytes,
 		@JsonProperty("refillRateBytesPerSecond") long refillRateBytesPerSecond,
 		@JsonProperty("burstMultiplier") double burstMultiplier,
@@ -43,7 +41,6 @@ public class TokenBucket {
 		@JsonProperty("lastRefillTime") long lastRefillTime,
 		@JsonProperty("createdAt") LocalDateTime createdAt
 	) {
-		this.tierType = tierType;
 		this.bucketCapacityBytes = bucketCapacityBytes;
 		this.refillRateBytesPerSecond = refillRateBytesPerSecond;
 		this.burstMultiplier = burstMultiplier;
@@ -104,10 +101,6 @@ public class TokenBucket {
 
 	public void setLastRefillTime(long lastRefillTime) {
 		this.lastRefillTime = lastRefillTime;
-	}
-
-	public TierType getTierType() {
-		return tierType;
 	}
 
 	public long getBucketCapacityBytes() {

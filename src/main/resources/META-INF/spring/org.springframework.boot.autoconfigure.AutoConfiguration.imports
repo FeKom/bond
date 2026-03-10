@@ -1,0 +1,3 @@
+github.fekom.bond.config.BondJpaAutoConfiguration
+github.fekom.bond.config.BondAutoConfiguration
+github.fekom.bond.config.BondWebAutoConfiguration

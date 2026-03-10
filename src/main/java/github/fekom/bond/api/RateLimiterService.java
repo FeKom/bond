@@ -1,63 +1,58 @@
 package github.fekom.bond.api;
 
-import github.fekom.bond.domain.entities.Client.ClientRepository;
-import github.fekom.bond.domain.entities.RateLimiter.RateLimiter;
-import github.fekom.bond.domain.entities.RateLimiter.RateLimiterResult;
-import github.fekom.bond.infrastructure.repository.RateLimiterRepository;
-import java.time.LocalDateTime;
-import java.util.Optional;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import github.fekom.bond.algorithms.TokenBucket;
+import github.fekom.bond.domain.Capacity;
+import github.fekom.bond.domain.RequestResult;
+import java.util.Map;
 
-@Service
+/**
+ * Core service that performs byte-based rate limiting using token buckets.
+ * <p>
+ * Capacity is resolved in order: per-IP override &gt; per-endpoint config &gt; global default.
+ * <p>
+ * This bean is auto-configured by Bond. If you need to call it manually
+ * (instead of relying on {@link github.fekom.bond.infrastructure.web.BondRateLimitFilter}),
+ * inject it and call {@link #checkRateLimit(String, String, long)}.
+ */
 public class RateLimiterService {
 
-	private final ClientRepository clientRepository;
-	private final RateLimiterRepository rateLimiterRepository;
+	private final BucketStore bucketStore;
+	private final Capacity defaultCapacity;
+	private final Map<String, Capacity> endpointCapacities;
 
-	public RateLimiterService(ClientRepository clientRepository, RateLimiterRepository rateLimiterRepository) {
-		this.clientRepository = clientRepository;
-		this.rateLimiterRepository = rateLimiterRepository;
+	public RateLimiterService(BucketStore bucketStore, Capacity defaultCapacity, Map<String, Capacity> endpointCapacities) {
+		this.bucketStore = bucketStore;
+		this.defaultCapacity = defaultCapacity;
+		this.endpointCapacities = endpointCapacities;
 	}
 
-	@Transactional
-	public RateLimiterResult checkRateLimit(String clientId, long requestSizeBytes) {
-		var client = clientRepository
-			.findById(clientId)
-			.orElseThrow(() -> new IllegalArgumentException("Client not found"));
-
-		String endpoint = "/api";
-
-		// Busca ou cria o rate limiter para este cliente/endpoint
-		Optional<github.fekom.bond.infrastructure.persistence.RateLimiter> existingEntity =
-			rateLimiterRepository.findByClientIdAndEndPoint(clientId, endpoint);
-
-		github.fekom.bond.infrastructure.persistence.RateLimiter entity;
-		RateLimiter limiter;
-
-		if (existingEntity.isPresent()) {
-			// Usa o rate limiter existente com o bucket persistido
-			entity = existingEntity.get();
-			limiter = entity.toDomain();
-		} else {
-			// Cria novo rate limiter para o cliente
-			limiter = RateLimiter.create(clientId, endpoint, client.tier());
-			entity = github.fekom.bond.infrastructure.persistence.RateLimiter.fromDomain(limiter);
+	public RequestResult checkRateLimit(String ipAddress, String endpoint, long requestSizeBytes) {
+		// 1. Check if IP is blocked
+		if (bucketStore.isBlocked(ipAddress)) {
+			return RequestResult.blockedResult();
 		}
 
-		// Verifica se a request é permitida
-		boolean allowed = limiter.bucket().allowRequest(requestSizeBytes);
+		// 2. Resolve capacity: IP override > endpoint config > global default
+		Capacity capacity = bucketStore.findCapacityByIp(ipAddress)
+				.orElseGet(() -> endpointCapacities.getOrDefault(endpoint, defaultCapacity));
 
-		// Atualiza o estado do bucket na entity e salva
-		entity.setBucket(limiter.bucket());
-		entity.setupdatedAt(LocalDateTime.now());
-		rateLimiterRepository.save(entity);
+		// 3. Busca bucket existente ou cria novo
+		TokenBucket bucket = bucketStore.findBucket(ipAddress, endpoint)
+				.orElseGet(() -> new TokenBucket(capacity));
 
-		return new RateLimiterResult(
+		// 4. Verifica se a request é permitida
+		boolean allowed = bucket.allowRequest(requestSizeBytes);
+
+		// 5. Salva estado do bucket
+		bucketStore.saveBucket(ipAddress, endpoint, bucket);
+
+		// 6. Retorna resultado
+		return new RequestResult(
 			allowed,
-			limiter.bucket().getUsedBytes(),
-			limiter.bucket().getUsagePercentage(),
-			allowed ? 0 : limiter.bucket().getWaitTime(requestSizeBytes)
+			false,
+			bucket.getUsedBytes(),
+			bucket.getUsagePercentage(),
+			allowed ? 0 : bucket.getWaitTime(requestSizeBytes)
 		);
 	}
 }
