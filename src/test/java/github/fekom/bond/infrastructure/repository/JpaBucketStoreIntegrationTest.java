@@ -75,14 +75,14 @@ class JpaBucketStoreIntegrationTest {
 	// --- Bucket operations ---
 
 	@Test
-	@DisplayName("deve retornar empty quando bucket não existe")
+	@DisplayName("should return empty when bucket does not exist")
 	void shouldReturnEmptyWhenBucketDoesNotExist() {
 		Optional<TokenBucket> result = bucketStore.findBucket(IP, ENDPOINT);
 		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	@DisplayName("deve salvar e recuperar bucket com estado preservado")
+	@DisplayName("should save and retrieve bucket with preserved state")
 	void shouldSaveAndRetrieveBucket() {
 		TokenBucket bucket = new TokenBucket(DEFAULT_CAPACITY);
 		bucket.allowRequest(100);
@@ -96,7 +96,7 @@ class JpaBucketStoreIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("deve atualizar bucket existente sem duplicar")
+	@DisplayName("should update existing bucket without duplicating")
 	void shouldUpdateExistingBucketWithoutDuplicating() {
 		TokenBucket bucket = new TokenBucket(DEFAULT_CAPACITY);
 		bucketStore.saveBucket(IP, ENDPOINT, bucket);
@@ -111,7 +111,7 @@ class JpaBucketStoreIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("deve manter buckets separados por endpoint")
+	@DisplayName("should keep buckets separate by endpoint")
 	void shouldKeepBucketsSeparateByEndpoint() {
 		TokenBucket bucket1 = new TokenBucket(DEFAULT_CAPACITY);
 		bucket1.allowRequest(100);
@@ -129,7 +129,7 @@ class JpaBucketStoreIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("deve manter buckets separados por IP")
+	@DisplayName("should keep buckets separate by IP")
 	void shouldKeepBucketsSeparateByIp() {
 		bucketStore.saveBucket("10.0.0.1", ENDPOINT, new TokenBucket(DEFAULT_CAPACITY));
 		bucketStore.saveBucket("10.0.0.2", ENDPOINT, new TokenBucket(DEFAULT_CAPACITY));
@@ -139,14 +139,14 @@ class JpaBucketStoreIntegrationTest {
 	// --- Capacity override operations ---
 
 	@Test
-	@DisplayName("deve retornar empty quando não há capacity override")
+	@DisplayName("should return empty when no capacity override exists")
 	void shouldReturnEmptyWhenNoOverride() {
 		Optional<Capacity> result = bucketStore.findCapacityByIp(IP);
 		assertTrue(result.isEmpty());
 	}
 
 	@Test
-	@DisplayName("deve salvar e recuperar capacity override")
+	@DisplayName("should save and retrieve capacity override")
 	void shouldSaveAndRetrieveCapacityOverride() {
 		bucketStore.saveCapacityOverride(IP, OVERRIDE_CAPACITY);
 
@@ -158,7 +158,7 @@ class JpaBucketStoreIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("deve atualizar capacity override existente sem duplicar")
+	@DisplayName("should update existing capacity override without duplicating")
 	void shouldUpdateExistingOverrideWithoutDuplicating() {
 		bucketStore.saveCapacityOverride(IP, DEFAULT_CAPACITY);
 		bucketStore.saveCapacityOverride(IP, OVERRIDE_CAPACITY);
@@ -170,7 +170,7 @@ class JpaBucketStoreIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("deve manter overrides separados por IP")
+	@DisplayName("should keep overrides separate by IP")
 	void shouldKeepOverridesSeparateByIp() {
 		bucketStore.saveCapacityOverride("10.0.0.1", DEFAULT_CAPACITY);
 		bucketStore.saveCapacityOverride("10.0.0.2", OVERRIDE_CAPACITY);
@@ -183,13 +183,13 @@ class JpaBucketStoreIntegrationTest {
 	// --- Blocked client operations ---
 
 	@Test
-	@DisplayName("deve retornar false quando IP não está bloqueado")
+	@DisplayName("should return false when IP is not blocked")
 	void shouldReturnFalseWhenIpNotBlocked() {
 		assertFalse(bucketStore.isBlocked(IP));
 	}
 
 	@Test
-	@DisplayName("deve bloquear IP e verificar que está bloqueado")
+	@DisplayName("should block IP and verify it is blocked")
 	void shouldBlockIpAndVerifyBlocked() {
 		bucketStore.blockIp(IP, "suspicious activity");
 		assertTrue(bucketStore.isBlocked(IP));
@@ -197,7 +197,7 @@ class JpaBucketStoreIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("deve não duplicar ao bloquear IP já bloqueado")
+	@DisplayName("should not duplicate when blocking already blocked IP")
 	void shouldNotDuplicateWhenBlockingAlreadyBlockedIp() {
 		bucketStore.blockIp(IP, "first reason");
 		bucketStore.blockIp(IP, "second reason");
@@ -205,7 +205,7 @@ class JpaBucketStoreIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("deve desbloquear IP bloqueado")
+	@DisplayName("should unblock a blocked IP")
 	void shouldUnblockBlockedIp() {
 		bucketStore.blockIp(IP, "test");
 		assertTrue(bucketStore.isBlocked(IP));
@@ -217,13 +217,13 @@ class JpaBucketStoreIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("deve retornar false ao desbloquear IP que não está bloqueado")
+	@DisplayName("should return false when unblocking a non-blocked IP")
 	void shouldReturnFalseWhenUnblockingNonBlockedIp() {
 		assertFalse(bucketStore.unblockIp(IP));
 	}
 
 	@Test
-	@DisplayName("deve manter IPs bloqueados independentes")
+	@DisplayName("should keep blocked IPs independent")
 	void shouldKeepBlockedIpsIndependent() {
 		bucketStore.blockIp("10.0.0.1", "reason1");
 		bucketStore.blockIp("10.0.0.2", "reason2");

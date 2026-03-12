@@ -1,458 +1,328 @@
-# Bond - Byte-based Token Bucket Rate Limiter
+# Bond
 
-Um rate limiter baseado no algoritmo **Token Bucket** com consumo por **bytes comprimidos**. Diferente de rate limiters tradicionais que contam requisicoes, o Bond mede o tamanho real do payload comprimido (GZIP), permitindo um controle mais justo de banda.
+Byte-based rate limiter with token bucket for Spring Boot.
 
-## Visao Geral
+Bond limits HTTP traffic by **compressed payload size** (not request count), so a 10 KB POST costs more than a 200 B GET. It uses the [token bucket algorithm](https://en.wikipedia.org/wiki/Token_bucket) with configurable capacity per endpoint, per-IP overrides, and IP blocking.
 
-O Bond permite limitar o uso de APIs baseado no volume de dados transferido, nao apenas no numero de requisicoes. Payloads maiores consomem mais tokens; payloads menores (ou que comprimem bem) consomem menos.
+## Features
 
-### Principais Caracteristicas
+- **Byte-based** -- rate limits based on GZIP-compressed request size
+- **Token bucket** -- smooth refill with configurable burst multiplier
+- **Per-endpoint capacity** -- different limits for `/api/upload` vs `/api/data`
+- **Per-IP overrides** -- give specific clients more (or less) capacity
+- **IP blocking** -- block abusive IPs entirely (returns 403)
+- **Auto HTTP filter** -- automatically applies to all requests when `spring-boot-starter-web` is present
+- **Pluggable storage** -- in-memory by default, JPA with PostgreSQL opt-in, or bring your own
+- **Zero config** -- works out of the box with sensible defaults
 
-- **Token Bucket por Bytes**: Capacidade e refill medidos em bytes, nao em requisicoes
-- **Compressao GZIP**: Payloads sao comprimidos antes de calcular o consumo
-- **Sistema de Tiers**: FREE, STARTUP e ENTERPRISE com limites diferentes
-- **Burst Support**: Permite picos temporarios acima da capacidade normal
-- **Persistencia**: Estado do bucket salvo em PostgreSQL (JSONB)
-- **Autenticacao**: Integrado com Keycloak (OAuth2/JWT)
-- **Monitoramento**: Metricas Prometheus + Grafana inclusos
-
-## Arquitetura
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Security Layer                         │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  Spring Security + OAuth2 Resource Server (JWT)       │  │
-│  │  - Keycloak Integration                               │  │
-│  │  - Role-based Access Control (ADMIN, USER)            │  │
-│  └───────────────────────────────────────────────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│                        API Layer                            │
-│  ┌─────────────────┐  ┌──────────────────────────────────┐  │
-│  │ ClientController│  │     RateLimiterController        │  │
-│  │  POST /clients  │  │        POST /check               │  │
-│  │  GET /clients/* │  │                                  │  │
-│  └────────┬────────┘  └───────────────┬──────────────────┘  │
-│           │                           │                     │
-├───────────┼───────────────────────────┼─────────────────────┤
-│           ▼                           ▼                     │
-│  ┌─────────────────┐  ┌──────────────────────────────────┐  │
-│  │  ClientService  │  │       RateLimiterService         │  │
-│  │                 │  │  - Busca/Cria RateLimiter        │  │
-│  │                 │  │  - Verifica TokenBucket          │  │
-│  └────────┬────────┘  └───────────────┬──────────────────┘  │
-│           │                           │                     │
-├───────────┼───────────────────────────┼─────────────────────┤
-│           ▼                           ▼                     │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              Domain Layer (Imutavel)                │    │
-│  │  ┌─────────┐  ┌─────────────┐  ┌─────────────────┐  │    │
-│  │  │ Client  │  │ RateLimiter │  │   TokenBucket   │  │    │
-│  │  │ (record)│  │  (record)   │  │   (algoritmo)   │  │    │
-│  │  └─────────┘  └─────────────┘  └─────────────────┘  │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                             │
-├─────────────────────────────────────────────────────────────┤
-│                   Infrastructure Layer                      │
-│  ┌─────────────────┐  ┌──────────────────────────────────┐  │
-│  │  JPA Entities   │  │        Repositories              │  │
-│  │  - Client       │  │  - ImpClientRepository           │  │
-│  │  - RateLimiter  │  │  - RateLimiterRepository (JPA)   │  │
-│  └─────────────────┘  └──────────────────────────────────┘  │
-│                              │                              │
-│                              ▼                              │
-│                     ┌─────────────────┐                     │
-│                     │   PostgreSQL    │                     │
-│                     │    (JSONB)      │                     │
-│                     └─────────────────┘                     │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Sistema de Tiers
-
-| Tier | Capacidade | Refill | Burst | Requests/hora* |
-|------|------------|--------|-------|----------------|
-| FREE | 32 KB | 32 KB/hora | 150% | ~432 |
-| STARTUP | 10 MB | 10 MB/hora | 200% | ~140.000 |
-| ENTERPRISE | 1 GB | 1 GB/hora | 300% | ~14.000.000 |
-
-*Estimativa baseada em payload medio de ~75 bytes comprimidos
-
-## Como Executar
-
-### Pre-requisitos
+## Requirements
 
 - Java 21+
-- Docker e Docker Compose
-- Gradle (wrapper incluso)
+- Spring Boot 3.2+
 
-### 1. Subir a Infraestrutura Completa
+## Installation
 
-```bash
-# Subir PostgreSQL, Redis e Keycloak
-docker-compose up -d postgres redis keycloak
+### Gradle
+
+```kotlin
+implementation("io.github.fekom:bond:0.0.1")
 ```
 
-Aguarde o Keycloak inicializar (~30 segundos).
+### Maven
 
-### 2. Build e Executar a Aplicacao
-
-```bash
-# Build
-./gradlew build -x test
-
-# Executar
-./gradlew bootRun
+```xml
+<dependency>
+    <groupId>io.github.fekom</groupId>
+    <artifactId>bond</artifactId>
+    <version>0.0.1</version>
+</dependency>
 ```
 
-A aplicacao inicia em `http://localhost:8080`
+## Quick start
 
-### 3. Autenticacao com Keycloak
+Add Bond to your Spring Boot project and it works immediately with defaults:
 
-O Bond utiliza Keycloak para autenticacao. Usuarios pre-configurados:
+- 32 KB capacity per IP per endpoint
+- 9 bytes/second refill rate
+- 1.5x burst multiplier
+- In-memory storage
+- HTTP filter enabled on all endpoints
 
-| Usuario | Senha | Role | Permissoes |
-|---------|-------|------|------------|
-| admin | admin123 | ADMIN | Criar clientes, verificar rate limit |
-| user | user123 | USER | Apenas verificar rate limit |
+No configuration needed. Requests that exceed the limit get HTTP 429 with a `Retry-After` header.
 
-#### Obter Token JWT
+## Configuration
 
-```bash
-# Token para admin (pode criar clientes)
-TOKEN=$(curl -s -X POST "http://localhost:8180/realms/bond/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "client_id=bond-api" \
-  -d "username=admin" \
-  -d "password=admin123" \
-  -d "grant_type=password" | jq -r '.access_token')
+Configure via `application.yml`:
 
-echo $TOKEN
+```yaml
+bond:
+  capacity-bytes: 10485760                # 10 MB global default
+  refill-rate-bytes-per-second: 2912      # ~10 MB/hour
+  burst-multiplier: 2.0                   # allow bursts up to 2x capacity
+  filter-enabled: true                    # auto rate-limit HTTP requests (default)
+  endpoints:
+    /api/upload:
+      capacity-bytes: 52428800            # 50 MB for uploads
+      refill-rate-bytes-per-second: 14563
+      burst-multiplier: 1.5
+    /api/data:
+      capacity-bytes: 1048576             # 1 MB for data endpoints
+      refill-rate-bytes-per-second: 291
+      burst-multiplier: 2.0
 ```
 
-### 4. Testar os Endpoints
+### Properties reference
 
-#### Criar um Cliente (requer role ADMIN)
+| Property | Default | Description |
+|---|---|---|
+| `bond.capacity-bytes` | `32768` | Global bucket capacity in bytes |
+| `bond.refill-rate-bytes-per-second` | `9` | Bytes refilled per second |
+| `bond.burst-multiplier` | `1.5` | Burst allowance multiplier |
+| `bond.filter-enabled` | `true` | Enable automatic HTTP rate limiting filter |
+| `bond.endpoints.<path>.capacity-bytes` | -- | Per-endpoint capacity override |
+| `bond.endpoints.<path>.refill-rate-bytes-per-second` | -- | Per-endpoint refill rate |
+| `bond.endpoints.<path>.burst-multiplier` | `1.5` | Per-endpoint burst multiplier |
 
-```bash
-curl -X POST http://localhost:8080/clients \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"tier": "FREE"}'
+### Capacity resolution order
+
+When a request arrives, Bond resolves the capacity in this order:
+
+1. **Per-IP override** (set programmatically via `BucketStore.saveCapacityOverride()`)
+2. **Per-endpoint config** (from `bond.endpoints.*` in application.yml)
+3. **Global default** (from `bond.capacity-bytes`)
+
+## HTTP filter
+
+When `spring-boot-starter-web` is on the classpath, Bond automatically registers a servlet filter that:
+
+1. Resolves client IP from `X-Forwarded-For` > `X-Real-IP` > `remoteAddr`
+2. Calculates request size using GZIP compression
+3. Checks the rate limit
+4. Adds response headers on every response:
+
+| Header | Description |
+|---|---|
+| `X-RateLimit-Used-Bytes` | Bytes consumed from the bucket |
+| `X-RateLimit-Usage-Percent` | Bucket usage as percentage |
+
+**When the rate limit is exceeded (429):**
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 11
+X-RateLimit-Wait-Ms: 11000
+Content-Type: application/json
+
+{"error":"rate_limit_exceeded","retryAfterSeconds":11}
 ```
 
-Resposta:
-```json
-{
-  "id": "API_KEY_019bf768-680a-7135-8a53-ea141f7755c8",
-  "enabled": true,
-  "createdAt": "2026-01-25T20:06:13.387285",
-  "updatedAt": "2026-01-25T20:06:13.387285",
-  "tier": "FREE",
-  "message": "Client created successfully"
+**When an IP is blocked (403):**
+
+```
+HTTP/1.1 403 Forbidden
+Content-Type: application/json
+
+{"error":"ip_blocked"}
+```
+
+Disable the filter with `bond.filter-enabled=false` to use `RateLimiterService` manually.
+
+## Programmatic usage
+
+Inject `RateLimiterService` or `BucketStore` directly:
+
+```java
+@RestController
+public class MyController {
+
+    private final RateLimiterService rateLimiter;
+    private final BucketStore bucketStore;
+
+    public MyController(RateLimiterService rateLimiter, BucketStore bucketStore) {
+        this.rateLimiter = rateLimiter;
+        this.bucketStore = bucketStore;
+    }
+
+    // Manual rate limit check
+    @PostMapping("/api/process")
+    public ResponseEntity<?> process(@RequestBody byte[] body, HttpServletRequest req) {
+        RequestResult result = rateLimiter.checkRateLimit(
+            req.getRemoteAddr(), "/api/process", body.length
+        );
+
+        if (result.blocked()) {
+            return ResponseEntity.status(403).body("{\"error\":\"ip_blocked\"}");
+        }
+        if (!result.allowed()) {
+            return ResponseEntity.status(429).build();
+        }
+
+        // process request...
+        return ResponseEntity.ok().build();
+    }
+
+    // Block an IP
+    @PostMapping("/admin/block")
+    public void blockIp(@RequestParam String ip, @RequestParam String reason) {
+        bucketStore.blockIp(ip, reason);
+    }
+
+    // Unblock an IP
+    @DeleteMapping("/admin/block")
+    public void unblockIp(@RequestParam String ip) {
+        bucketStore.unblockIp(ip);
+    }
+
+    // Override capacity for a specific IP
+    @PostMapping("/admin/capacity")
+    public void overrideCapacity(@RequestParam String ip) {
+        bucketStore.saveCapacityOverride(ip, new Capacity(
+            104_857_600,  // 100 MB
+            29_127,       // ~100 MB/hour
+            2.0
+        ));
+    }
 }
 ```
 
-#### Verificar Rate Limit (requer autenticacao)
+## Storage
 
-```bash
-curl -X POST http://localhost:8080/check \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-API-Key: API_KEY_019bf768-680a-7135-8a53-ea141f7755c8" \
-  -H "Content-Type: application/json" \
-  -d '{"data": "hello world"}'
+### In-memory (default)
+
+Works out of the box. State is lost on application restart. Good for single-instance deployments or when persistence is not needed.
+
+### JPA with PostgreSQL
+
+Add the dependencies to your project and Bond auto-configures `JpaBucketStore`:
+
+```kotlin
+// build.gradle.kts
+implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+runtimeOnly("org.postgresql:postgresql")
 ```
 
-Resposta (Permitido):
-```json
-{
-  "allowed": true,
-  "usagePercentage": 0.30,
-  "waitTimeMs": 0
+Create the tables using the reference schema provided in [`bond-schema.sql`](src/main/resources/bond-schema.sql):
+
+```sql
+CREATE TABLE IF NOT EXISTS clients (
+    id VARCHAR(255) PRIMARY KEY,
+    ip_address VARCHAR(45) NOT NULL UNIQUE,
+    capacity_bytes BIGINT NOT NULL,
+    refill_rate_bytes_per_second BIGINT NOT NULL,
+    burst_multiplier DOUBLE PRECISION NOT NULL,
+    created_at VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS requests (
+    id VARCHAR(255) PRIMARY KEY,
+    ip_address VARCHAR(45) NOT NULL,
+    endpoint VARCHAR(1024) NOT NULL,
+    bucket JSONB,
+    created_at VARCHAR(50) NOT NULL,
+    updated_at VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS blocked_clients (
+    id VARCHAR(255) PRIMARY KEY,
+    ip_address VARCHAR(45) NOT NULL UNIQUE,
+    reason VARCHAR(500),
+    blocked_at VARCHAR(50) NOT NULL
+);
+```
+
+Or use `spring.jpa.hibernate.ddl-auto=update` to let Hibernate create them automatically.
+
+### Custom storage
+
+Implement `BucketStore` and declare it as a Spring bean. Bond will use your implementation instead of the defaults:
+
+```java
+@Bean
+public BucketStore redisBucketStore(RedisTemplate<String, byte[]> redis) {
+    return new RedisBucketStore(redis); // your implementation
 }
 ```
 
-Headers retornados:
-- `X-RateLimit-Used`: Bytes consumidos
-- `X-RateLimit-Usage`: Porcentagem de uso
+The `BucketStore` interface:
 
-#### Quando o Limite e Excedido (HTTP 429)
-
-```json
-{
-  "allowed": false,
-  "usagePercentage": 99.85,
-  "waitTimeMs": 5111
+```java
+public interface BucketStore {
+    Optional<TokenBucket> findBucket(String ipAddress, String endpoint);
+    void saveBucket(String ipAddress, String endpoint, TokenBucket bucket);
+    Optional<Capacity> findCapacityByIp(String ipAddress);
+    void saveCapacityOverride(String ipAddress, Capacity capacity);
+    boolean isBlocked(String ipAddress);
+    void blockIp(String ipAddress, String reason);
+    boolean unblockIp(String ipAddress);
 }
 ```
 
-Header: `X-RateLimit-Reset-After: 5111` (ms para aguardar)
+## How it works
 
-#### Buscar Cliente por ID
-
-```bash
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8080/clients/API_KEY_019bf768-680a-7135-8a53-ea141f7755c8
+```
+Request arrives
+    |
+    v
+Resolve client IP (X-Forwarded-For > X-Real-IP > remoteAddr)
+    |
+    v
+Is IP blocked? ---yes---> 403 Forbidden
+    |
+    no
+    |
+    v
+Compress request body with GZIP --> compressed size = bytes to consume
+    |
+    v
+Find or create TokenBucket for (IP, endpoint)
+    |
+    v
+bucket.allowRequest(compressedSize)
+    |
+    +----- allowed ----> 200 OK (pass to next filter)
+    |
+    +----- rejected ----> 429 Too Many Requests + Retry-After header
+    |
+    v
+Save bucket state
 ```
 
-#### Buscar Tier do Cliente
-
-```bash
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8080/clients/tier/API_KEY_019bf768-680a-7135-8a53-ea141f7755c8
-```
-
-### 5. Script de Teste Completo com Autenticacao
-
-```bash
-#!/bin/bash
-
-echo "=== Obtendo token JWT ==="
-TOKEN=$(curl -s -X POST "http://localhost:8180/realms/bond/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "client_id=bond-api" \
-  -d "username=admin" \
-  -d "password=admin123" \
-  -d "grant_type=password" | jq -r '.access_token')
-
-if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
-  echo "Erro ao obter token. Verifique se o Keycloak esta rodando."
-  exit 1
-fi
-echo "Token obtido com sucesso!"
-
-echo ""
-echo "=== Criando cliente FREE ==="
-RESPONSE=$(curl -s -X POST http://localhost:8080/clients \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"tier": "FREE"}')
-echo "$RESPONSE" | jq .
-
-API_KEY=$(echo "$RESPONSE" | jq -r '.id')
-echo "API_KEY: $API_KEY"
-
-echo ""
-echo "=== Testando Rate Limit (5 requests) ==="
-for i in {1..5}; do
-  echo "--- Request $i ---"
-  curl -s -X POST http://localhost:8080/check \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "X-API-Key: $API_KEY" \
-    -H "Content-Type: application/json" \
-    -d "{\"data\": \"teste $i $RANDOM\"}" | jq .
-done
-
-echo ""
-echo "=== Esgotando o limite ==="
-for i in {1..300}; do
-  RESPONSE=$(curl -s -X POST http://localhost:8080/check \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "X-API-Key: $API_KEY" \
-    -H "Content-Type: application/json" \
-    -d "{\"data\": \"Request $i - $RANDOM $RANDOM\"}" \
-    -w "|%{http_code}")
-  
-  HTTP_CODE=$(echo "$RESPONSE" | rev | cut -d'|' -f1 | rev)
-  
-  if [ "$HTTP_CODE" == "429" ]; then
-    echo "RATE LIMIT ATINGIDO na request $i!"
-    echo "$RESPONSE" | cut -d'|' -f1 | jq .
-    break
-  fi
-  
-  if [ $((i % 50)) -eq 0 ]; then
-    echo "Request $i - HTTP $HTTP_CODE"
-  fi
-done
-```
-
-### 6. Subir Stack Completa (com Monitoramento)
-
-```bash
-docker-compose up -d
-```
-
-Servicos disponiveis:
-- **API Bond**: http://localhost:7070
-- **Swagger UI**: http://localhost:7070/swagger-ui.html
-- **Keycloak**: http://localhost:8180 (admin console: admin/admin)
-- **Prometheus**: http://localhost:9090
-- **Grafana**: http://localhost:3000 (admin/admin)
-- **PostgreSQL**: localhost:5432
-- **Redis**: localhost:6379
-
-## Testes
-
-O projeto inclui uma suite completa de testes:
-
-### Executar Todos os Testes
-
-```bash
-./gradlew test
-```
-
-### Tipos de Testes
-
-| Tipo | Descricao | Arquivos |
-|------|-----------|----------|
-| **Unit Tests** | Testes unitarios com Mockito | `TokenBucketTest`, `ClientServiceTest`, `RateLimiterServiceTest` |
-| **Integration Tests** | Testes de controllers com MockMvc | `ClientControllerTest`, `RateLimiterControllerTest` |
-| **E2E Tests** | Testes end-to-end com Testcontainers | `E2EIntegrationTest` |
-
-### Cobertura de Testes
-
-- **TokenBucket**: Algoritmo de consumo, refill, burst, serializacao JSON
-- **Services**: Criacao de clientes, verificacao de rate limit, busca por ID
-- **Controllers**: Autenticacao (401), autorizacao (403), requests validas, validacao de entrada
-- **E2E**: Fluxo completo com banco de dados real (PostgreSQL via Testcontainers)
-
-## Estrutura do Projeto
+## Project structure
 
 ```
 bond/
-├── src/main/java/github/fekom/bond/
-│   ├── algorithms/
-│   │   └── TokenBucket.java           # Algoritmo Token Bucket
-│   ├── api/
-│   │   ├── ClientService.java         # Logica de negocios - Clientes
-│   │   ├── RateLimiterService.java    # Logica de negocios - Rate Limit
-│   │   └── dto/                       # Request/Response DTOs
-│   ├── config/
-│   │   └── SecurityConfig.java        # Configuracao Spring Security + OAuth2
-│   ├── domain/
-│   │   ├── entities/                  # Records imutaveis (Client, RateLimiter)
-│   │   └── enums/TierType.java        # Configuracao dos Tiers
-│   ├── infrastructure/
-│   │   ├── persistence/               # Entidades JPA
-│   │   ├── repository/                # Implementacoes de repositorio
-│   │   └── web/                       # Controllers REST
-│   └── resolver/
-│       ├── GlobalExceptionHandler.java # Tratamento global de erros
-│       ├── ClientIPResolver.java      # Extrai IP do cliente
-│       └── PayloadCompressor.java     # Compressao GZIP
-├── src/main/resources/
-│   ├── application.yml                # Configuracao principal
-│   └── db/migration/                  # Migrations Flyway
-├── src/test/java/github/fekom/bond/
-│   ├── algorithms/
-│   │   └── TokenBucketTest.java       # Testes unitarios TokenBucket
-│   ├── api/
-│   │   ├── ClientServiceTest.java     # Testes unitarios ClientService
-│   │   └── RateLimiterServiceTest.java # Testes unitarios RateLimiterService
-│   ├── config/
-│   │   └── TestSecurityConfig.java    # Configuracao de seguranca para testes
-│   ├── infrastructure/web/
-│   │   ├── ClientControllerTest.java  # Testes de integracao
-│   │   └── RateLimiterControllerTest.java
-│   └── E2EIntegrationTest.java        # Testes E2E com Testcontainers
-├── docker/
-│   └── keycloak/
-│       └── bond-realm.json            # Configuracao do realm Keycloak
-├── compose.yaml                       # Docker Compose
-├── Dockerfile                         # Build da aplicacao
-└── build.gradle.kts                   # Dependencias Gradle
+  src/main/java/github/fekom/bond/
+    algorithms/
+      TokenBucket              # Token bucket algorithm (Jackson-serializable)
+    api/
+      BucketStore              # Storage abstraction (interface)
+      RateLimiterService       # Core rate limiting logic
+      PayloadCompressor        # GZIP compression utility
+    config/
+      BondAutoConfiguration    # Registers InMemoryBucketStore + RateLimiterService
+      BondJpaAutoConfiguration # Registers JpaBucketStore (when JPA is present)
+      BondWebAutoConfiguration # Registers BondRateLimitFilter (when Web is present)
+      BondProperties           # @ConfigurationProperties(prefix = "bond")
+    domain/
+      Capacity                 # Rate limit config (bytes, refill rate, burst)
+      RequestResult            # Result of a rate limit check
+    infrastructure/
+      InMemoryBucketStore      # Default in-memory storage
+      persistence/             # JPA entities (Client, Request, BlockedClient)
+      repository/              # JPA repositories + JpaBucketStore
+      web/                     # BondRateLimitFilter + CachedBodyHttpServletRequest
 ```
 
-## Calculo do Consumo de Tokens
+## Building from source
 
-```
-1. Request recebida com payload JSON
-                 │
-                 ▼
-2. Payload comprimido com GZIP
-   (ex: 1000 bytes → 150 bytes comprimidos)
-                 │
-                 ▼
-3. Tamanho comprimido = tokens a consumir
-   (150 bytes = 150 tokens)
-                 │
-                 ▼
-4. TokenBucket verifica disponibilidade
-   ├─ Se tokens >= 150 → PERMITIDO (200 OK)
-   └─ Se tokens < 150  → BLOQUEADO (429 Too Many Requests)
-                 │
-                 ▼
-5. Estado do bucket persistido no PostgreSQL (JSONB)
+```bash
+git clone https://github.com/FeKom/bond.git
+cd bond
+./gradlew build
 ```
 
-## Seguranca
+Tests require Docker for Testcontainers (PostgreSQL).
 
-### Endpoints e Permissoes
+## License
 
-| Endpoint | Metodo | Permissao | Descricao |
-|----------|--------|-----------|-----------|
-| `/clients` | POST | ROLE_ADMIN | Criar novo cliente |
-| `/clients/{id}` | GET | Authenticated | Buscar cliente por ID |
-| `/clients/tier/{id}` | GET | Authenticated | Buscar tier do cliente |
-| `/check` | POST | Authenticated | Verificar rate limit |
-| `/actuator/health` | GET | Public | Health check |
-| `/swagger-ui/**` | GET | Public | Documentacao API |
-
-### Configuracao OAuth2
-
-O Bond atua como **Resource Server** OAuth2, validando tokens JWT emitidos pelo Keycloak.
-
-```yaml
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8180/realms/bond
-```
-
-## Configuracao
-
-### application.yml
-
-```yaml
-server:
-  port: 8080
-
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/bond
-    username: postgres
-    password: postgres
-  jpa:
-    hibernate:
-      ddl-auto: update
-  flyway:
-    baseline-on-migrate: true
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8180/realms/bond
-```
-
-### Variaveis de Ambiente (Docker)
-
-```yaml
-SPRING_PROFILES_ACTIVE: docker
-SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bond
-SPRING_DATASOURCE_USERNAME: postgres
-SPRING_DATASOURCE_PASSWORD: postgres
-SPRING_REDIS_HOST: redis
-SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/bond
-```
-
-## Tecnologias Utilizadas
-
-- **Java 21** com preview features
-- **Spring Boot 3.2.0**
-- **Spring Security** + OAuth2 Resource Server
-- **Spring Data JPA** + Hibernate
-- **PostgreSQL 15** com JSONB
-- **Redis 7** (preparado para cache distribuido)
-- **Keycloak 23** para autenticacao
-- **Flyway** para migrations
-- **Micrometer** + Prometheus para metricas
-- **SpringDoc OpenAPI** para documentacao
-- **JUnit 5** + Mockito para testes
-- **Testcontainers** para testes de integracao
-
-## Licenca
-
-Projeto experimental - GitHub/FeKom
+[MIT](LICENSE)

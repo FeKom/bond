@@ -36,17 +36,17 @@ public class RateLimiterService {
 		Capacity capacity = bucketStore.findCapacityByIp(ipAddress)
 				.orElseGet(() -> endpointCapacities.getOrDefault(endpoint, defaultCapacity));
 
-		// 3. Busca bucket existente ou cria novo
+		// 3. Find existing bucket or create new one
 		TokenBucket bucket = bucketStore.findBucket(ipAddress, endpoint)
 				.orElseGet(() -> new TokenBucket(capacity));
 
-		// 4. Verifica se a request é permitida
+		// 4. Check if request is allowed
 		boolean allowed = bucket.allowRequest(requestSizeBytes);
 
-		// 5. Salva estado do bucket
+		// 5. Save bucket state
 		bucketStore.saveBucket(ipAddress, endpoint, bucket);
 
-		// 6. Retorna resultado
+		// 6. Return result
 		return new RequestResult(
 			allowed,
 			false,

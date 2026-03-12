@@ -30,22 +30,22 @@ class TokenBucketTest {
     );
 
     @Nested
-    @DisplayName("Criação")
+    @DisplayName("Creation")
     class Creation {
 
         @Test
-        @DisplayName("deve criar bucket com capacidade correta para FREE capacity")
+        @DisplayName("should create bucket with correct capacity for FREE capacity")
         void shouldCreateWithCorrectCapacityForFreeTier() {
             TokenBucket bucket = new TokenBucket(FREE_CAPACITY);
 
             assertEquals(32_768, bucket.getBucketCapacityBytes());
-            assertEquals(32_768, bucket.getCurrentBytes()); // Começa cheio
+            assertEquals(32_768, bucket.getCurrentBytes()); // Starts full
             assertEquals(0, bucket.getUsedBytes());
             assertEquals(0.0, bucket.getUsagePercentage(), 0.01);
         }
 
         @Test
-        @DisplayName("deve criar bucket com capacidade correta para STARTUP capacity")
+        @DisplayName("should create bucket with correct capacity for STARTUP capacity")
         void shouldCreateWithCorrectCapacityForStartupTier() {
             TokenBucket bucket = new TokenBucket(STARTUP_CAPACITY);
 
@@ -53,7 +53,7 @@ class TokenBucketTest {
         }
 
         @Test
-        @DisplayName("deve criar bucket com capacidade correta para ENTERPRISE capacity")
+        @DisplayName("should create bucket with correct capacity for ENTERPRISE capacity")
         void shouldCreateWithCorrectCapacityForEnterpriseTier() {
             TokenBucket bucket = new TokenBucket(ENTERPRISE_CAPACITY);
 
@@ -61,7 +61,7 @@ class TokenBucketTest {
         }
 
         @Test
-        @DisplayName("deve configurar burst multiplier corretamente")
+        @DisplayName("should set burst multiplier correctly")
         void shouldSetBurstMultiplierCorrectly() {
             TokenBucket freeBucket = new TokenBucket(FREE_CAPACITY);
             TokenBucket startupBucket = new TokenBucket(STARTUP_CAPACITY);
@@ -85,46 +85,46 @@ class TokenBucketTest {
         }
 
         @Test
-        @DisplayName("deve permitir request quando há capacidade suficiente")
+        @DisplayName("should allow request when sufficient capacity")
         void shouldAllowRequestWhenSufficientCapacity() {
             assertTrue(bucket.allowRequest(100));
             assertEquals(100, bucket.getUsedBytes());
         }
 
         @Test
-        @DisplayName("deve permitir múltiplas requests até esgotar capacidade")
+        @DisplayName("should allow multiple requests until capacity exhausted")
         void shouldAllowMultipleRequestsUntilCapacityExhausted() {
             // 32KB = 32768 bytes
             assertTrue(bucket.allowRequest(10_000));
             assertTrue(bucket.allowRequest(10_000));
             assertTrue(bucket.allowRequest(10_000));
-            assertFalse(bucket.allowRequest(5_000)); // Não cabe mais
+            assertFalse(bucket.allowRequest(5_000)); // No room left
         }
 
         @Test
-        @DisplayName("deve rejeitar request quando não há capacidade")
+        @DisplayName("should reject request when insufficient capacity")
         void shouldRejectRequestWhenInsufficientCapacity() {
-            bucket.allowRequest(32_000); // Consome quase tudo
-            assertFalse(bucket.allowRequest(1_000)); // Não cabe
+            bucket.allowRequest(32_000); // Consume almost everything
+            assertFalse(bucket.allowRequest(1_000)); // No room
         }
 
         @Test
-        @DisplayName("deve rejeitar request maior que capacidade total")
+        @DisplayName("should reject request larger than total capacity")
         void shouldRejectRequestLargerThanTotalCapacity() {
-            assertFalse(bucket.allowRequest(50_000)); // Maior que 32KB
+            assertFalse(bucket.allowRequest(50_000)); // Larger than 32KB
         }
 
         @Test
-        @DisplayName("deve permitir request de tamanho zero")
+        @DisplayName("should allow zero size request")
         void shouldAllowZeroSizeRequest() {
             assertTrue(bucket.allowRequest(0));
             assertEquals(0, bucket.getUsedBytes());
         }
 
         @Test
-        @DisplayName("deve atualizar usagePercentage corretamente")
+        @DisplayName("should update usagePercentage correctly")
         void shouldUpdateUsagePercentageCorrectly() {
-            bucket.allowRequest(16_384); // Metade da capacidade
+            bucket.allowRequest(16_384); // Half of capacity
             assertEquals(50.0, bucket.getUsagePercentage(), 0.01);
         }
     }
@@ -134,37 +134,37 @@ class TokenBucketTest {
     class Refill {
 
         @Test
-        @DisplayName("deve reabastecer tokens ao longo do tempo")
+        @DisplayName("should refill tokens over time")
         void shouldRefillTokensOverTime() throws InterruptedException {
             TokenBucket bucket = new TokenBucket(FREE_CAPACITY);
 
-            // Consome todos os tokens
+            // Consume all tokens
             bucket.allowRequest(32_768);
             assertEquals(0, bucket.getCurrentBytes());
 
-            // Espera um pouco para refill (FREE = ~9 bytes/segundo)
-            Thread.sleep(1100); // 1.1 segundos
+            // Wait for refill (FREE = ~9 bytes/second)
+            Thread.sleep(1100); // 1.1 seconds
 
-            // Força refill
+            // Force refill
             bucket.refill();
 
-            // Deve ter reabastecido alguns bytes
+            // Should have refilled some bytes
             assertTrue(bucket.getCurrentBytes() > 0);
         }
 
         @Test
-        @DisplayName("não deve exceder capacidade máxima no refill")
+        @DisplayName("should not exceed max capacity on refill")
         void shouldNotExceedMaxCapacityOnRefill() throws InterruptedException {
             TokenBucket bucket = new TokenBucket(FREE_CAPACITY);
 
-            // Consome poucos tokens
+            // Consume few tokens
             bucket.allowRequest(100);
 
-            // Espera e força refill
+            // Wait and force refill
             Thread.sleep(100);
             bucket.refill();
 
-            // Não deve exceder capacidade
+            // Should not exceed capacity
             assertTrue(bucket.getCurrentBytes() <= bucket.getBucketCapacityBytes());
         }
     }
@@ -174,40 +174,40 @@ class TokenBucketTest {
     class GetWaitTime {
 
         @Test
-        @DisplayName("deve retornar 0 quando há capacidade suficiente")
+        @DisplayName("should return 0 when sufficient capacity")
         void shouldReturnZeroWhenSufficientCapacity() {
             TokenBucket bucket = new TokenBucket(FREE_CAPACITY);
             assertEquals(0, bucket.getWaitTime(100));
         }
 
         @Test
-        @DisplayName("deve calcular tempo de espera quando capacidade insuficiente")
+        @DisplayName("should calculate wait time when insufficient capacity")
         void shouldCalculateWaitTimeWhenInsufficientCapacity() {
             TokenBucket bucket = new TokenBucket(FREE_CAPACITY);
 
-            // Esgota o bucket
+            // Exhaust the bucket
             bucket.allowRequest(32_768);
 
-            // Calcula tempo para conseguir 100 bytes
-            // FREE refill rate = ~9 bytes/segundo
-            // 100 bytes / 9 bytes/s = ~11 segundos = ~11000ms
+            // Calculate time to get 100 bytes
+            // FREE refill rate = ~9 bytes/second
+            // 100 bytes / 9 bytes/s = ~11 seconds = ~11000ms
             long waitTime = bucket.getWaitTime(100);
             assertTrue(waitTime > 0);
-            assertTrue(waitTime > 10_000); // Mais de 10 segundos
+            assertTrue(waitTime > 10_000); // More than 10 seconds
         }
     }
 
     @Nested
-    @DisplayName("Serialização JSON")
+    @DisplayName("JSON Serialization")
     class JsonSerialization {
 
         @Test
-        @DisplayName("deve preservar estado após serialização/deserialização")
+        @DisplayName("should preserve state after serialization/deserialization")
         void shouldPreserveStateAfterSerialization() {
             TokenBucket original = new TokenBucket(STARTUP_CAPACITY);
             original.allowRequest(5000);
 
-            // Simula deserialização usando o construtor JSON
+            // Simulate deserialization using the JSON constructor
             TokenBucket deserialized = new TokenBucket(
                 original.getBucketCapacityBytes(),
                 original.getRefillRateBytesPerSecond(),

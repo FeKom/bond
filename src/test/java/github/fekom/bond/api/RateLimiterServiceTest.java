@@ -54,7 +54,7 @@ class RateLimiterServiceTest {
 	class CheckRateLimit {
 
 		@Test
-		@DisplayName("deve permitir request quando há capacidade (novo bucket)")
+		@DisplayName("should allow request when there is capacity (new bucket)")
 		void shouldAllowRequestWhenNewBucket() {
 			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
 			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.empty());
@@ -71,7 +71,7 @@ class RateLimiterServiceTest {
 		}
 
 		@Test
-		@DisplayName("deve permitir request com bucket existente que tem capacidade")
+		@DisplayName("should allow request when existing bucket has capacity")
 		void shouldAllowRequestWhenExistingBucketHasCapacity() {
 			TokenBucket existingBucket = new TokenBucket(DEFAULT_CAPACITY);
 			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
@@ -86,7 +86,7 @@ class RateLimiterServiceTest {
 		}
 
 		@Test
-		@DisplayName("deve rejeitar request quando não há capacidade")
+		@DisplayName("should reject request when there is no capacity")
 		void shouldRejectRequestWhenNoCapacity() {
 			TokenBucket almostEmptyBucket = new TokenBucket(DEFAULT_CAPACITY);
 			almostEmptyBucket.allowRequest(32_718);
@@ -102,7 +102,7 @@ class RateLimiterServiceTest {
 		}
 
 		@Test
-		@DisplayName("deve usar default capacity quando endpoint não tem config específica")
+		@DisplayName("should use default capacity when endpoint has no specific config")
 		void shouldUseDefaultCapacityWhenNoEndpointConfig() {
 			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
 			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.empty());
@@ -115,50 +115,50 @@ class RateLimiterServiceTest {
 		}
 
 		@Test
-		@DisplayName("deve usar capacity do endpoint quando configurado")
+		@DisplayName("should use endpoint capacity when configured")
 		void shouldUseEndpointCapacityWhenConfigured() {
 			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
 			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.empty());
 			when(bucketStore.findBucket(IP_ADDRESS, UPLOAD_ENDPOINT)).thenReturn(Optional.empty());
 
-			// 5MB - maior que default (32KB) mas menor que UPLOAD (10MB)
+			// 5MB - larger than default (32KB) but smaller than UPLOAD (10MB)
 			RequestResult result = service.checkRateLimit(IP_ADDRESS, UPLOAD_ENDPOINT, 5_000_000);
 
 			assertTrue(result.allowed());
 		}
 
 		@Test
-		@DisplayName("deve rejeitar no default mas permitir no endpoint com capacity maior")
+		@DisplayName("should reject on default but allow on endpoint with higher capacity")
 		void shouldRejectOnDefaultButAllowOnEndpointWithHigherCapacity() {
 			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
 			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.empty());
 			when(bucketStore.findBucket(IP_ADDRESS, ENDPOINT)).thenReturn(Optional.empty());
 			when(bucketStore.findBucket(IP_ADDRESS, UPLOAD_ENDPOINT)).thenReturn(Optional.empty());
 
-			// 50KB - maior que default (32KB)
+			// 50KB - larger than default (32KB)
 			RequestResult defaultResult = service.checkRateLimit(IP_ADDRESS, ENDPOINT, 50_000);
 			assertFalse(defaultResult.allowed());
 
-			// Mesmo tamanho no endpoint upload (10MB) deve passar
+			// Same size on upload endpoint (10MB) should pass
 			RequestResult uploadResult = service.checkRateLimit(IP_ADDRESS, UPLOAD_ENDPOINT, 50_000);
 			assertTrue(uploadResult.allowed());
 		}
 
 		@Test
-		@DisplayName("deve usar IP override sobre capacity do endpoint")
+		@DisplayName("should use IP override over endpoint capacity")
 		void shouldUseIpOverrideOverEndpointCapacity() {
 			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(false);
 			when(bucketStore.findCapacityByIp(IP_ADDRESS)).thenReturn(Optional.of(IP_OVERRIDE_CAPACITY));
 			when(bucketStore.findBucket(IP_ADDRESS, UPLOAD_ENDPOINT)).thenReturn(Optional.empty());
 
-			// 50MB - maior que UPLOAD (10MB) mas menor que IP_OVERRIDE (1GB)
+			// 50MB - larger than UPLOAD (10MB) but smaller than IP_OVERRIDE (1GB)
 			RequestResult result = service.checkRateLimit(IP_ADDRESS, UPLOAD_ENDPOINT, 50_000_000);
 
 			assertTrue(result.allowed());
 		}
 
 		@Test
-		@DisplayName("deve rejeitar imediatamente quando IP está bloqueado")
+		@DisplayName("should reject immediately when IP is blocked")
 		void shouldRejectImmediatelyWhenIpIsBlocked() {
 			when(bucketStore.isBlocked(IP_ADDRESS)).thenReturn(true);
 
@@ -167,7 +167,7 @@ class RateLimiterServiceTest {
 			assertFalse(result.allowed());
 			assertTrue(result.blocked());
 			assertEquals(0, result.usedBytes());
-			// Não deve acessar bucket nem capacity quando bloqueado
+			// Should not access bucket or capacity when blocked
 			verify(bucketStore, never()).findBucket(any(), any());
 			verify(bucketStore, never()).findCapacityByIp(any());
 			verify(bucketStore, never()).saveBucket(any(), any(), any());

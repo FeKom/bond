@@ -37,7 +37,7 @@ class BondRateLimitFilterTest {
 	class DoFilterInternal {
 
 		@Test
-		@DisplayName("deve permitir request e passar adiante no filter chain")
+		@DisplayName("should allow request and continue filter chain")
 		void shouldAllowRequestAndContinueChain() throws Exception {
 			MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/data");
 			request.setRemoteAddr("10.0.0.1");
@@ -54,7 +54,7 @@ class BondRateLimitFilterTest {
 		}
 
 		@Test
-		@DisplayName("deve bloquear request com 429 quando rate limit excedido")
+		@DisplayName("should block request with 429 when rate limit exceeded")
 		void shouldBlockRequestWith429WhenRateLimitExceeded() throws Exception {
 			MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/upload");
 			request.setRemoteAddr("10.0.0.1");
@@ -73,7 +73,7 @@ class BondRateLimitFilterTest {
 		}
 
 		@Test
-		@DisplayName("deve resolver IP de X-Forwarded-For")
+		@DisplayName("should resolve IP from X-Forwarded-For")
 		void shouldResolveIpFromXForwardedFor() throws Exception {
 			MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/data");
 			request.setRemoteAddr("127.0.0.1");
@@ -86,14 +86,14 @@ class BondRateLimitFilterTest {
 
 			filter.doFilterInternal(request, response, chain);
 
-			// Verifica que usou o primeiro IP do X-Forwarded-For
+			// Verify it used the first IP from X-Forwarded-For
 			ArgumentCaptor<String> ipCaptor = ArgumentCaptor.forClass(String.class);
 			verify(rateLimiterService).checkRateLimit(ipCaptor.capture(), eq("/api/data"), anyLong());
 			assertEquals("203.0.113.50", ipCaptor.getValue());
 		}
 
 		@Test
-		@DisplayName("deve resolver IP de X-Real-IP quando X-Forwarded-For ausente")
+		@DisplayName("should resolve IP from X-Real-IP when X-Forwarded-For is absent")
 		void shouldResolveIpFromXRealIp() throws Exception {
 			MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/data");
 			request.setRemoteAddr("127.0.0.1");
@@ -112,7 +112,7 @@ class BondRateLimitFilterTest {
 		}
 
 		@Test
-		@DisplayName("deve incluir headers de rate limit na resposta permitida")
+		@DisplayName("should include rate limit headers on allowed response")
 		void shouldIncludeRateLimitHeadersOnAllowedResponse() throws Exception {
 			MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/data");
 			request.setRemoteAddr("10.0.0.1");
@@ -129,7 +129,7 @@ class BondRateLimitFilterTest {
 		}
 
 		@Test
-		@DisplayName("deve usar tamanho 0 para GET sem body")
+		@DisplayName("should use size 0 for GET without body")
 		void shouldUseZeroSizeForGetWithoutBody() throws Exception {
 			MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/data");
 			request.setRemoteAddr("10.0.0.1");
@@ -145,7 +145,7 @@ class BondRateLimitFilterTest {
 		}
 
 		@Test
-		@DisplayName("deve retornar 403 quando IP está bloqueado")
+		@DisplayName("should return 403 when IP is blocked")
 		void shouldReturn403WhenIpIsBlocked() throws Exception {
 			MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/data");
 			request.setRemoteAddr("10.0.0.1");
